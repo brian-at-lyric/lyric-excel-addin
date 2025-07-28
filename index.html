@@ -385,6 +385,14 @@
             document.getElementById('loading').style.display = loading ? 'block' : 'none';
         }
 
+        // Debug logging function that shows in both console and UI
+        function debugLog(message) {
+            console.log(message);
+            const debugDiv = document.getElementById('debugInfo');
+            debugDiv.innerHTML += message + '\n';
+            debugDiv.style.display = 'block';
+        }
+
         // Focused test for Method 4 with detailed debugging
         async function testConnection() {
             const baseUrl = document.getElementById('baseUrl').value.trim();
@@ -396,6 +404,9 @@
                 return;
             }
 
+            // Clear previous debug info
+            document.getElementById('debugInfo').innerHTML = '';
+            
             setLoading(true);
             
             const apiBaseUrl = getApiBaseUrl();
@@ -409,20 +420,20 @@
                 const combined = clientId + ':' + clientSecret;
                 const basicAuth = btoa(combined);
                 
-                console.log('=== AUTHENTICATION DEBUG ===');
-                console.log('Client ID:', clientId);
-                console.log('Client Secret (first 8 chars):', clientSecret.substring(0, 8) + '...');
-                console.log('Combined string:', clientId + ':' + clientSecret.substring(0, 8) + '...');
-                console.log('Base64 encoded:', basicAuth);
-                console.log('Decoded back:', atob(basicAuth));
-                console.log('URL:', fullUrl);
+                debugLog('=== AUTHENTICATION DEBUG ===');
+                debugLog(`Client ID: ${clientId}`);
+                debugLog(`Client Secret (first 8 chars): ${clientSecret.substring(0, 8)}...`);
+                debugLog(`Combined string: ${clientId}:${clientSecret.substring(0, 8)}...`);
+                debugLog(`Base64 encoded: ${basicAuth}`);
+                debugLog(`Decoded back: ${atob(basicAuth)}`);
+                debugLog(`URL: ${fullUrl}`);
                 
                 const requestBody = {
                     clientId: clientId,
                     clientSecret: clientSecret
                 };
                 
-                console.log('Request body:', JSON.stringify(requestBody, null, 2));
+                debugLog(`Request body: ${JSON.stringify(requestBody, null, 2)}`);
                 
                 const response = await fetch(fullUrl, {
                     method: 'POST',
@@ -435,11 +446,11 @@
                     mode: 'cors'
                 });
 
-                console.log('Response status:', response.status);
-                console.log('Response headers:', [...response.headers.entries()]);
+                debugLog(`Response status: ${response.status}`);
+                debugLog(`Response headers: ${JSON.stringify([...response.headers.entries()], null, 2)}`);
                 
                 const responseText = await response.text();
-                console.log('Response body:', responseText);
+                debugLog(`Response body: ${responseText}`);
 
                 if (response.ok) {
                     const data = JSON.parse(responseText);
@@ -459,19 +470,19 @@
                 showStatus(`❌ Failed: ${response.status} - ${responseText}`, 'error');
                 
                 // Additional debugging: Let's try manually creating the Base64
-                console.log('=== MANUAL BASE64 TEST ===');
+                debugLog('=== MANUAL BASE64 TEST ===');
                 const manualBase64 = btoa(clientId + ':' + clientSecret);
-                console.log('Manual Base64:', manualBase64);
-                console.log('Are they the same?', basicAuth === manualBase64);
+                debugLog(`Manual Base64: ${manualBase64}`);
+                debugLog(`Are they the same? ${basicAuth === manualBase64}`);
                 
                 // Test if credentials have hidden characters
-                console.log('Client ID length:', clientId.length);
-                console.log('Client Secret length:', clientSecret.length);
-                console.log('Client ID bytes:', [...clientId].map(c => c.charCodeAt(0)));
-                console.log('Client Secret bytes (first 8):', [...clientSecret.substring(0, 8)].map(c => c.charCodeAt(0)));
+                debugLog(`Client ID length: ${clientId.length}`);
+                debugLog(`Client Secret length: ${clientSecret.length}`);
+                debugLog(`Client ID bytes: ${[...clientId].map(c => c.charCodeAt(0)).join(',')}`);
+                debugLog(`Client Secret bytes (first 8): ${[...clientSecret.substring(0, 8)].map(c => c.charCodeAt(0)).join(',')}`);
 
             } catch (error) {
-                console.error('Request failed:', error);
+                debugLog(`Request failed: ${error.message}`);
                 showStatus(`❌ Request error: ${error.message}`, 'error');
             } finally {
                 setLoading(false);
