@@ -612,8 +612,17 @@
                 const downloadInfo = await response.json();
                 const downloadUrl = downloadInfo.downloads.urls[0];
 
-                // Fetch the actual data
-                const dataResponse = await fetch(downloadUrl);
+                // Fetch the actual data through proxy if needed
+                let finalDownloadUrl = downloadUrl;
+                const useProxy = document.getElementById('useProxy').checked;
+                
+                if (useProxy) {
+                    // Route S3 downloads through our proxy
+                    finalDownloadUrl = `http://localhost:3000/s3/${encodeURIComponent(downloadUrl)}`;
+                }
+                
+                console.log('Downloading from:', finalDownloadUrl);
+                const dataResponse = await fetch(finalDownloadUrl);
                 let csvData = await dataResponse.text();
 
                 // Parse CSV data
