@@ -415,13 +415,10 @@
                 const apiBaseUrl = getApiBaseUrl();
                 const fullUrl = `${apiBaseUrl}/tokens/create-token`;
 
-                // ONLY CHANGE: Use Basic Auth instead of JSON body
-                const basicAuthCredentials = btoa(clientId + ':' + clientSecret);
-
+                // Use original JSON body approach - no Basic Auth needed
                 const response = await fetch(fullUrl, {
                     method: 'POST',
                     headers: {
-                        'Authorization': `Basic ${basicAuthCredentials}`,
                         'Content-Type': 'application/json',
                         'Accept': 'application/json'
                     },
