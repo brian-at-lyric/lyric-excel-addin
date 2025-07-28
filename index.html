@@ -385,17 +385,36 @@
             document.getElementById('loading').style.display = loading ? 'block' : 'none';
         }
 
-        // SIMPLE test connection - just try the method we think works
-        async function testConnection() {
-            const baseUrl = document.getElementById('baseUrl').value.trim();
-            const clientId = document.getElementById('clientId').value;
-            const clientSecret = document.getElementById('clientSecret').value;
+        // SIMPLE test connection - with error checking
+        function testConnection() {
+            try {
+                const baseUrlEl = document.getElementById('baseUrl');
+                const clientIdEl = document.getElementById('clientId');
+                const clientSecretEl = document.getElementById('clientSecret');
+                
+                if (!baseUrlEl || !clientIdEl || !clientSecretEl) {
+                    alert('Error: Cannot find form elements');
+                    return;
+                }
+                
+                const baseUrl = baseUrlEl.value.trim();
+                const clientId = clientIdEl.value;
+                const clientSecret = clientSecretEl.value;
 
-            if (!baseUrl || !clientId || !clientSecret) {
-                showStatus('Please fill in all fields', 'error');
-                return;
+                if (!baseUrl || !clientId || !clientSecret) {
+                    showStatus('Please fill in all fields', 'error');
+                    return;
+                }
+
+                doConnection(baseUrl, clientId, clientSecret);
+            } catch (error) {
+                console.error('testConnection error:', error);
+                alert('Error in testConnection: ' + error.message);
             }
+        }
 
+        // Separate async function to avoid issues
+        async function doConnection(baseUrl, clientId, clientSecret) {
             setLoading(true);
             
             try {
@@ -418,7 +437,7 @@
                     headers: {
                         'Authorization': `Basic ${basicAuth}`,
                         'Content-Type': 'application/json',
-                        'Accept': 'application/json'
+                        'Accept': '*/*'
                     },
                     body: JSON.stringify({
                         clientId: clientId,
@@ -437,8 +456,10 @@
 
                 if (response.ok) {
                     const data = JSON.parse(responseText);
-                    if (data['access-token']) {
-                        lyricAPI.token = data['access-token'];
+                    // Check for both possible key names
+                    const token = data['access-token'] || data['access_token'];
+                    if (token) {
+                        lyricAPI.token = token;
                         lyricAPI.baseUrl = apiBaseUrl;
                         lyricAPI.clientId = clientId;
                         lyricAPI.clientSecret = clientSecret;
@@ -446,6 +467,8 @@
                         switchTab('data');
                         saveSettings();
                         return;
+                    } else {
+                        console.log('No access token found in response:', data);
                     }
                 }
 
@@ -457,7 +480,7 @@
                 console.log('Error:', error);
                 
                 if (error.name === 'TypeError' && error.message.includes('fetch')) {
-                    showStatus(`❌ Network error: Cannot reach ${getApiBaseUrl()}. Try enabling CORS proxy if available.`, 'error');
+                    showStatus(`❌ Network error: Cannot reach API. Try enabling CORS proxy if available.`, 'error');
                 } else {
                     showStatus(`❌ Connection failed: ${error.message}`, 'error');
                 }
