@@ -425,7 +425,10 @@
                         'Content-Type': 'application/json',
                         'Accept': 'application/json'
                     },
-                    body: JSON.stringify({}),
+                    body: JSON.stringify({
+                        clientId: clientId,
+                        clientSecret: clientSecret
+                    }),
                     mode: 'cors'
                 });
 
