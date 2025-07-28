@@ -478,7 +478,7 @@
                         console.log('SUCCESS: Token saved to lyricAPI');
                         showStatus('✅ Connection successful!', 'success');
                         switchTab('data');
-                        saveSettings();
+                        // Don't auto-save settings for now to avoid Office context issues
                         return;
                     } else {
                         console.log('ERROR: No access token found in response:', data);
@@ -509,6 +509,11 @@
         async function loadTables() {
             const appSlug = document.getElementById('appSlug').value;
             
+            console.log('=== LOAD TABLES DEBUG ===');
+            console.log('App Slug:', appSlug);
+            console.log('Token exists:', !!lyricAPI.token);
+            console.log('Base URL:', lyricAPI.baseUrl);
+            
             if (!appSlug) {
                 showStatus('Please enter an App Slug', 'error');
                 return;
@@ -522,19 +527,28 @@
             setLoading(true);
 
             try {
-                const response = await fetch(`${lyricAPI.baseUrl}/table/${appSlug}`, {
+                const tableUrl = `${lyricAPI.baseUrl}/table/${appSlug}`;
+                console.log('Fetching tables from:', tableUrl);
+                
+                const response = await fetch(tableUrl, {
                     headers: {
                         'Authorization': `Bearer ${lyricAPI.token}`,
                         'Accept': 'application/json'
                     }
                 });
 
+                console.log('Tables response status:', response.status);
+                console.log('Tables response headers:', Object.fromEntries(response.headers.entries()));
+
                 if (!response.ok) {
                     const errorText = await response.text();
+                    console.log('Tables error response:', errorText);
                     throw new Error(`Failed to load tables: ${response.status} ${response.statusText}`);
                 }
 
                 const tables = await response.json();
+                console.log('Tables data:', tables);
+                
                 const select = document.getElementById('tableIds');
                 select.innerHTML = '';
 
