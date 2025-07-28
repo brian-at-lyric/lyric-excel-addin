@@ -456,20 +456,29 @@
 
                 if (response.ok) {
                     const data = JSON.parse(responseText);
+                    console.log('Parsed response data:', data);
+                    
                     // Check for both possible key names
                     const token = data['access-token'] || data['access_token'];
+                    console.log('Found token:', token ? 'YES' : 'NO');
+                    console.log('Token value:', token);
+                    
                     if (token) {
                         lyricAPI.token = token;
                         lyricAPI.baseUrl = apiBaseUrl;
                         lyricAPI.clientId = clientId;
                         lyricAPI.clientSecret = clientSecret;
+                        console.log('SUCCESS: Token saved to lyricAPI');
                         showStatus('✅ Connection successful!', 'success');
                         switchTab('data');
                         saveSettings();
                         return;
                     } else {
-                        console.log('No access token found in response:', data);
+                        console.log('ERROR: No access token found in response:', data);
+                        showStatus('❌ No access token in response', 'error');
                     }
+                } else {
+                    console.log('Response not OK, status:', response.status);
                 }
 
                 // If we get here, it failed
