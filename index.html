@@ -506,17 +506,20 @@
                 showDebugInfo(`Client ID: ${clientId.substring(0, 8)}...`);
                 showDebugInfo(`Using proxy: ${document.getElementById('useProxy').checked}`);
 
+                // The API expects Basic Auth (Base64 encoded clientId:clientSecret)
+                const basicAuthCredentials = btoa(clientId + ':' + clientSecret);
+                showDebugInfo(`Basic Auth header: Basic ${basicAuthCredentials.substring(0, 20)}...`);
+
                 // Test connection by getting token
                 const response = await fetch(fullUrl, {
                     method: 'POST',
                     headers: {
+                        'Authorization': `Basic ${basicAuthCredentials}`,
                         'Content-Type': 'application/json',
                         'Accept': 'application/json'
                     },
-                    body: JSON.stringify({
-                        clientId: clientId,
-                        clientSecret: clientSecret
-                    }),
+                    // Don't send clientId/clientSecret in body - use Basic Auth instead
+                    body: JSON.stringify({}),
                     mode: 'cors'
                 });
 
