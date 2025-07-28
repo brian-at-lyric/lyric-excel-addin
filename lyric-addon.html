@@ -1,0 +1,786 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Lyric Data Connector</title>
+
+    <!-- Office.js -->
+    <script type="text/javascript" src="https://appsforoffice.microsoft.com/lib/1/hosted/office.js"></script>
+
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+            color: #333;
+        }
+
+        .container {
+            max-width: 400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            padding: 20px;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            color: #0078d4;
+            margin: 0;
+            font-size: 24px;
+            font-weight: 600;
+        }
+
+        .header p {
+            color: #666;
+            margin: 5px 0 0 0;
+            font-size: 14px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .form-group input, .form-group select {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e1e1e1;
+            border-radius: 4px;
+            font-size: 14px;
+            box-sizing: border-box;
+            transition: border-color 0.3s;
+        }
+
+        .form-group input:focus, .form-group select:focus {
+            outline: none;
+            border-color: #0078d4;
+        }
+
+        .button {
+            width: 100%;
+            padding: 12px;
+            background-color: #0078d4;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background-color 0.3s;
+            margin-bottom: 10px;
+        }
+
+        .button:hover {
+            background-color: #106ebe;
+        }
+
+        .button:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+        }
+
+        .button.secondary {
+            background-color: #6c757d;
+        }
+
+        .button.secondary:hover {
+            background-color: #5a6268;
+        }
+
+        .status {
+            padding: 12px;
+            border-radius: 4px;
+            margin-bottom: 20px;
+            font-size: 14px;
+            display: none;
+        }
+
+        .status.success {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .status.error {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .status.info {
+            background-color: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+
+        .advanced-options {
+            border-top: 1px solid #e1e1e1;
+            padding-top: 20px;
+            margin-top: 20px;
+        }
+
+        .advanced-toggle {
+            background: none;
+            border: none;
+            color: #0078d4;
+            cursor: pointer;
+            font-size: 14px;
+            text-decoration: underline;
+            margin-bottom: 15px;
+        }
+
+        .help-text {
+            font-size: 12px;
+            color: #666;
+            margin-top: 5px;
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 20px;
+        }
+
+        .spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #0078d4;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 10px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .example-btn {
+            background-color: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            padding: 6px 12px;
+            margin-right: 8px;
+            margin-bottom: 4px;
+            font-size: 12px;
+            color: #495057;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: inline-block;
+        }
+
+        .example-btn:hover {
+            background-color: #e9ecef;
+            border-color: #adb5bd;
+        }
+
+        .example-btn:active {
+            background-color: #0078d4;
+            color: white;
+            border-color: #0078d4;
+        }
+
+        .data-preview {
+            max-height: 200px;
+            overflow-y: auto;
+            border: 1px solid #e1e1e1;
+            border-radius: 4px;
+            padding: 10px;
+            background-color: #f9f9f9;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            margin-top: 10px;
+            display: none;
+        }
+
+        .tab-container {
+            margin-bottom: 20px;
+        }
+
+        .tabs {
+            display: flex;
+            border-bottom: 2px solid #e1e1e1;
+            margin-bottom: 20px;
+        }
+
+        .tab {
+            flex: 1;
+            padding: 12px;
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            color: #666;
+            border-bottom: 2px solid transparent;
+            transition: all 0.3s;
+        }
+
+        .tab.active {
+            color: #0078d4;
+            border-bottom-color: #0078d4;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎵 Lyric Data Connector</h1>
+            <p>Connect your Excel workbook to Lyric platform data</p>
+        </div>
+
+        <div class="status" id="status"></div>
+        <div class="loading" id="loading">
+            <div class="spinner"></div>
+            <div>Connecting to Lyric API...</div>
+        </div>
+
+        <div class="tab-container">
+            <div class="tabs">
+                <button class="tab active" onclick="switchTab('connect')">Connect</button>
+                <button class="tab" onclick="switchTab('data')">Data</button>
+                <button class="tab" onclick="switchTab('settings')">Settings</button>
+            </div>
+
+            <!-- Connect Tab -->
+            <div class="tab-content active" id="connect-tab">
+                <div class="form-group">
+                    <label for="baseUrl">Lyric Environment URL</label>
+                    <input type="text" id="baseUrl" placeholder="https://your-env.studio.lyric.tech" value="">
+                    <div class="help-text">Enter your complete Lyric environment URL (without /lyapi)</div>
+                </div>
+
+                <div class="form-group">
+                    <label>Quick Examples:</label>
+                    <div style="margin-top: 8px;">
+                        <button type="button" class="example-btn" onclick="setExampleUrl('https://trial1.studio.lyric.tech')">Trial 1</button>
+                        <button type="button" class="example-btn" onclick="setExampleUrl('https://demo.studio.lyric.tech')">Demo</button>
+                        <button type="button" class="example-btn" onclick="setExampleUrl('https://staging.studio.lyric.tech')">Staging</button>
+                    </div>
+                    <div class="help-text">Click examples above or enter your custom URL</div>
+                </div>
+
+                <div class="form-group">
+                    <label for="clientId">Client ID</label>
+                    <input type="text" id="clientId" placeholder="Enter your Client ID">
+                    <div class="help-text">From Admin Settings > API Users</div>
+                </div>
+
+                <div class="form-group">
+                    <label for="clientSecret">Client Secret</label>
+                    <input type="password" id="clientSecret" placeholder="Enter your Client Secret">
+                    <div class="help-text">Generated when creating API user</div>
+                </div>
+
+                <button class="button" onclick="testConnection()">🔍 Test Connection</button>
+            </div>
+
+            <!-- Data Tab -->
+            <div class="tab-content" id="data-tab">
+                <div class="form-group">
+                    <label for="appSlug">App Slug</label>
+                    <input type="text" id="appSlug" placeholder="untitled-sequence-pnglv">
+                    <div class="help-text">The app identifier from your Lyric application</div>
+                </div>
+
+                <div class="form-group">
+                    <label for="tableIds">Table IDs</label>
+                    <select id="tableIds" multiple size="4">
+                        <option value="">Select tables after connecting...</option>
+                    </select>
+                    <div class="help-text">Hold Ctrl to select multiple tables</div>
+                </div>
+
+                <div class="form-group">
+                    <label for="downloadFormat">Download Format</label>
+                    <select id="downloadFormat">
+                        <option value="csv">CSV</option>
+                        <option value="xlsx">Excel</option>
+                    </select>
+                </div>
+
+                <button class="button" onclick="loadTables()">📋 Load Available Tables</button>
+                <button class="button" onclick="importData()">📥 Import Data to Excel</button>
+                
+                <div class="data-preview" id="dataPreview"></div>
+            </div>
+
+            <!-- Settings Tab -->
+            <div class="tab-content" id="settings-tab">
+                <div class="form-group">
+                    <label for="worksheetName">Worksheet Name</label>
+                    <input type="text" id="worksheetName" value="Lyric Data" placeholder="Lyric Data">
+                    <div class="help-text">Name for the worksheet where data will be imported</div>
+                </div>
+
+                <div class="form-group">
+                    <label for="startCell">Starting Cell</label>
+                    <input type="text" id="startCell" value="A1" placeholder="A1">
+                    <div class="help-text">Cell where data import will begin</div>
+                </div>
+
+                <div class="form-group">
+                    <label>
+                        <input type="checkbox" id="clearExisting" checked> Clear existing data before import
+                    </label>
+                </div>
+
+                <div class="form-group">
+                    <label>
+                        <input type="checkbox" id="autoRefresh"> Enable auto-refresh (every 30 minutes)
+                    </label>
+                </div>
+
+                <button class="button secondary" onclick="saveSettings()">💾 Save Settings</button>
+                <button class="button secondary" onclick="clearSettings()">🗑️ Clear All Settings</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let lyricAPI = {
+            baseUrl: '',
+            token: '',
+            clientId: '',
+            clientSecret: ''
+        };
+
+        // Initialize Office Add-in
+        Office.onReady((info) => {
+            if (info.host === Office.HostType.Excel) {
+                loadSettings();
+                console.log('Lyric Excel Add-in loaded successfully');
+            }
+        });
+
+        // Tab switching
+        function switchTab(tabName) {
+            // Hide all tabs
+            document.querySelectorAll('.tab-content').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            document.querySelectorAll('.tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+
+            // Show selected tab
+            document.getElementById(tabName + '-tab').classList.add('active');
+            event.target.classList.add('active');
+        }
+
+        // Set example URL
+        function setExampleUrl(url) {
+            document.getElementById('baseUrl').value = url;
+            lyricAPI.baseUrl = url + '/lyapi';
+            
+            // Visual feedback
+            event.target.style.backgroundColor = '#0078d4';
+            event.target.style.color = 'white';
+            setTimeout(() => {
+                event.target.style.backgroundColor = '#f8f9fa';
+                event.target.style.color = '#495057';
+            }, 200);
+        }
+
+        // Base URL change handler
+        document.getElementById('baseUrl').addEventListener('input', function() {
+            const url = this.value.trim();
+            if (url) {
+                // Remove trailing slash if present
+                const cleanUrl = url.replace(/\/$/, '');
+                lyricAPI.baseUrl = cleanUrl + '/lyapi';
+            } else {
+                lyricAPI.baseUrl = '';
+            }
+        });
+
+        // Environment change handler - REMOVED (no longer needed)
+        // Custom URL handler - REMOVED (no longer needed)
+
+        // Show status message
+        function showStatus(message, type = 'info') {
+            const status = document.getElementById('status');
+            status.className = 'status ' + type;
+            status.textContent = message;
+            status.style.display = 'block';
+            
+            if (type === 'success' || type === 'error') {
+                setTimeout(() => {
+                    status.style.display = 'none';
+                }, 5000);
+            }
+        }
+
+        // Show/hide loading
+        function setLoading(loading) {
+            document.getElementById('loading').style.display = loading ? 'block' : 'none';
+        }
+
+        // Test API connection
+        async function testConnection() {
+            const baseUrl = document.getElementById('baseUrl').value.trim();
+            const clientId = document.getElementById('clientId').value;
+            const clientSecret = document.getElementById('clientSecret').value;
+
+            if (!baseUrl) {
+                showStatus('Please enter your Lyric environment URL', 'error');
+                return;
+            }
+
+            if (!clientId || !clientSecret) {
+                showStatus('Please enter both Client ID and Client Secret', 'error');
+                return;
+            }
+
+            // Validate URL format
+            try {
+                new URL(baseUrl);
+            } catch {
+                showStatus('Please enter a valid URL (e.g., https://your-env.studio.lyric.tech)', 'error');
+                return;
+            }
+
+            setLoading(true);
+            
+            try {
+                // Clean up the base URL and set API endpoint
+                const cleanUrl = baseUrl.replace(/\/$/, '');
+                lyricAPI.baseUrl = cleanUrl + '/lyapi';
+
+                // Test connection by getting token
+                const response = await fetch(`${lyricAPI.baseUrl}/tokens/create-token`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        clientId: clientId,
+                        clientSecret: clientSecret
+                    })
+                });
+
+                if (!response.ok) {
+                    throw new Error(`Authentication failed: ${response.status} ${response.statusText}`);
+                }
+
+                const data = await response.json();
+                lyricAPI.token = data['access-token'];
+                lyricAPI.clientId = clientId;
+                lyricAPI.clientSecret = clientSecret;
+
+                showStatus(`✅ Connection successful to ${cleanUrl}!`, 'success');
+                switchTab('data');
+                
+                // Auto-save connection settings
+                saveSettings();
+
+            } catch (error) {
+                console.error('Connection test failed:', error);
+                showStatus(`❌ Connection failed: ${error.message}`, 'error');
+            } finally {
+                setLoading(false);
+            }
+        }
+
+        // Load available tables
+        async function loadTables() {
+            const appSlug = document.getElementById('appSlug').value;
+            
+            if (!appSlug) {
+                showStatus('Please enter an App Slug', 'error');
+                return;
+            }
+
+            if (!lyricAPI.token) {
+                showStatus('Please test connection first', 'error');
+                return;
+            }
+
+            setLoading(true);
+
+            try {
+                const response = await fetch(`${lyricAPI.baseUrl}/table/${appSlug}`, {
+                    headers: {
+                        'Authorization': `Bearer ${lyricAPI.token}`
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error(`Failed to load tables: ${response.status} ${response.statusText}`);
+                }
+
+                const tables = await response.json();
+                const select = document.getElementById('tableIds');
+                select.innerHTML = '';
+
+                if (Array.isArray(tables) && tables.length > 0) {
+                    tables.forEach(table => {
+                        const option = document.createElement('option');
+                        option.value = table.id || table._id || table.tableId;
+                        option.textContent = table.name || table.displayName || option.value;
+                        select.appendChild(option);
+                    });
+                    showStatus(`Found ${tables.length} tables`, 'success');
+                } else {
+                    select.innerHTML = '<option value="">No tables found</option>';
+                    showStatus('No tables found for this app', 'info');
+                }
+
+            } catch (error) {
+                console.error('Failed to load tables:', error);
+                showStatus(`Failed to load tables: ${error.message}`, 'error');
+            } finally {
+                setLoading(false);
+            }
+        }
+
+        // Import data to Excel
+        async function importData() {
+            const appSlug = document.getElementById('appSlug').value;
+            const selectedTables = Array.from(document.getElementById('tableIds').selectedOptions).map(opt => opt.value);
+            const format = document.getElementById('downloadFormat').value;
+
+            if (!appSlug || selectedTables.length === 0) {
+                showStatus('Please select app slug and at least one table', 'error');
+                return;
+            }
+
+            if (!lyricAPI.token) {
+                await refreshToken();
+            }
+
+            setLoading(true);
+
+            try {
+                // Download data
+                const response = await fetch(`${lyricAPI.baseUrl}/table/download/${appSlug}`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${lyricAPI.token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        downloadFormat: format,
+                        tableIds: selectedTables
+                    })
+                });
+
+                if (!response.ok) {
+                    throw new Error(`Download failed: ${response.status} ${response.statusText}`);
+                }
+
+                const downloadInfo = await response.json();
+                const downloadUrl = downloadInfo.downloads.urls[0];
+
+                // Fetch the actual data
+                const dataResponse = await fetch(downloadUrl);
+                let csvData = await dataResponse.text();
+
+                // Handle gzip if needed
+                if (downloadUrl.includes('.gz')) {
+                    // For now, assume the browser handles gzip automatically
+                    // In production, you might need a decompression library
+                }
+
+                // Parse CSV data
+                const rows = csvData.split('\n').filter(row => row.trim());
+                const headers = rows[0].split(',');
+                const data = rows.slice(1).map(row => row.split(','));
+
+                // Insert into Excel
+                await Excel.run(async (context) => {
+                    const worksheetName = document.getElementById('worksheetName').value || 'Lyric Data';
+                    const startCell = document.getElementById('startCell').value || 'A1';
+                    const clearExisting = document.getElementById('clearExisting').checked;
+
+                    // Get or create worksheet
+                    let worksheet;
+                    try {
+                        worksheet = context.workbook.worksheets.getItem(worksheetName);
+                    } catch {
+                        worksheet = context.workbook.worksheets.add(worksheetName);
+                    }
+
+                    // Clear existing data if requested
+                    if (clearExisting) {
+                        worksheet.getUsedRange()?.clear();
+                    }
+
+                    // Get starting range
+                    const startRange = worksheet.getRange(startCell);
+                    
+                    // Insert headers
+                    const headerRange = startRange.getResizedRange(0, headers.length - 1);
+                    headerRange.values = [headers];
+                    headerRange.format.font.bold = true;
+                    headerRange.format.fill.color = '#0078d4';
+                    headerRange.format.font.color = 'white';
+
+                    // Insert data
+                    if (data.length > 0) {
+                        const dataRange = startRange.getOffsetRange(1, 0).getResizedRange(data.length - 1, headers.length - 1);
+                        dataRange.values = data;
+                    }
+
+                    // Auto-fit columns
+                    worksheet.getUsedRange().format.autofitColumns();
+                    
+                    // Activate the worksheet
+                    worksheet.activate();
+
+                    await context.sync();
+                });
+
+                showStatus(`✅ Successfully imported ${data.length} rows to Excel!`, 'success');
+
+                // Show preview
+                const preview = document.getElementById('dataPreview');
+                preview.innerHTML = `
+                    <strong>Preview (first 5 rows):</strong><br>
+                    ${headers.join(' | ')}<br>
+                    ${data.slice(0, 5).map(row => row.join(' | ')).join('<br>')}
+                    ${data.length > 5 ? '<br>... and ' + (data.length - 5) + ' more rows' : ''}
+                `;
+                preview.style.display = 'block';
+
+            } catch (error) {
+                console.error('Import failed:', error);
+                showStatus(`❌ Import failed: ${error.message}`, 'error');
+            } finally {
+                setLoading(false);
+            }
+        }
+
+        // Refresh token
+        async function refreshToken() {
+            if (!lyricAPI.clientId || !lyricAPI.clientSecret) {
+                throw new Error('No stored credentials. Please reconnect.');
+            }
+
+            const response = await fetch(`${lyricAPI.baseUrl}/tokens/create-token`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    clientId: lyricAPI.clientId,
+                    clientSecret: lyricAPI.clientSecret
+                })
+            });
+
+            if (!response.ok) {
+                throw new Error('Token refresh failed');
+            }
+
+            const data = await response.json();
+            lyricAPI.token = data['access-token'];
+        }
+
+        // Save settings to Office storage
+        function saveSettings() {
+            const settings = {
+                baseUrl: document.getElementById('baseUrl').value,
+                clientId: document.getElementById('clientId').value,
+                worksheetName: document.getElementById('worksheetName').value,
+                startCell: document.getElementById('startCell').value,
+                clearExisting: document.getElementById('clearExisting').checked,
+                autoRefresh: document.getElementById('autoRefresh').checked
+            };
+
+            // Don't save the client secret for security
+            Office.context.document.settings.set('lyricSettings', JSON.stringify(settings));
+            Office.context.document.settings.saveAsync();
+            
+            showStatus('Settings saved successfully', 'success');
+        }
+
+        // Load settings from Office storage
+        function loadSettings() {
+            const settingsJson = Office.context.document.settings.get('lyricSettings');
+            if (settingsJson) {
+                try {
+                    const settings = JSON.parse(settingsJson);
+                    
+                    document.getElementById('baseUrl').value = settings.baseUrl || '';
+                    document.getElementById('clientId').value = settings.clientId || '';
+                    document.getElementById('worksheetName').value = settings.worksheetName || 'Lyric Data';
+                    document.getElementById('startCell').value = settings.startCell || 'A1';
+                    document.getElementById('clearExisting').checked = settings.clearExisting !== false;
+                    document.getElementById('autoRefresh').checked = settings.autoRefresh || false;
+
+                    // Set base URL if available
+                    if (settings.baseUrl) {
+                        const cleanUrl = settings.baseUrl.replace(/\/$/, '');
+                        lyricAPI.baseUrl = cleanUrl + '/lyapi';
+                    }
+                    
+                } catch (error) {
+                    console.error('Failed to load settings:', error);
+                }
+            }
+        }
+
+        // Clear all settings
+        function clearSettings() {
+            if (confirm('Are you sure you want to clear all settings? This will remove saved connection details.')) {
+                Office.context.document.settings.remove('lyricSettings');
+                Office.context.document.settings.saveAsync();
+                
+                // Reset form
+                document.getElementById('baseUrl').value = '';
+                document.getElementById('clientId').value = '';
+                document.getElementById('clientSecret').value = '';
+                document.getElementById('appSlug').value = '';
+                document.getElementById('worksheetName').value = 'Lyric Data';
+                document.getElementById('startCell').value = 'A1';
+                document.getElementById('clearExisting').checked = true;
+                document.getElementById('autoRefresh').checked = false;
+                
+                // Clear API object
+                lyricAPI = { baseUrl: '', token: '', clientId: '', clientSecret: '' };
+                
+                showStatus('All settings cleared', 'info');
+            }
+        }
+
+        // Auto-refresh functionality
+        setInterval(async () => {
+            const autoRefresh = document.getElementById('autoRefresh').checked;
+            const appSlug = document.getElementById('appSlug').value;
+            const selectedTables = Array.from(document.getElementById('tableIds').selectedOptions).map(opt => opt.value);
+            
+            if (autoRefresh && appSlug && selectedTables.length > 0 && lyricAPI.token) {
+                console.log('Auto-refreshing data...');
+                await importData();
+            }
+        }, 30 * 60 * 1000); // 30 minutes
+
+        // Initialize - no default URL needed since users enter their own
+    </script>
+</body>
+</html>
