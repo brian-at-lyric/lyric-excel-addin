@@ -234,9 +234,9 @@
 
         <div class="tab-container">
             <div class="tabs">
-                <button class="tab active" onclick="switchTab('connect')">Connect</button>
-                <button class="tab" onclick="switchTab('data')">Data</button>
-                <button class="tab" onclick="switchTab('settings')">Settings</button>
+                <button class="tab active" data-tab="connect">Connect</button>
+                <button class="tab" data-tab="data">Data</button>
+                <button class="tab" data-tab="settings">Settings</button>
             </div>
 
             <!-- Connect Tab -->
@@ -266,8 +266,8 @@
                     <div class="help-text">Generated when creating API user</div>
                 </div>
 
-                <button class="button" onclick="testConnection()">🔍 Test Connection</button>
-                <button class="button secondary" onclick="debugConnection()">🔧 Debug Connection</button>
+                <button class="button" id="testConnectionBtn">🔍 Test Connection</button>
+                <button class="button secondary" id="debugConnectionBtn">🔧 Debug Connection</button>
             </div>
 
             <!-- Data Tab -->
@@ -294,8 +294,8 @@
                     </select>
                 </div>
 
-                <button class="button" onclick="loadTables()">📋 Load Available Tables</button>
-                <button class="button" onclick="importData()">📥 Import Data to Excel</button>
+                <button class="button" id="loadTablesBtn">📋 Load Available Tables</button>
+                <button class="button" id="importDataBtn">📥 Import Data to Excel</button>
                 
                 <div class="data-preview" id="dataPreview"></div>
             </div>
@@ -326,8 +326,8 @@
                     </label>
                 </div>
 
-                <button class="button secondary" onclick="saveSettings()">💾 Save Settings</button>
-                <button class="button secondary" onclick="clearSettings()">🗑️ Clear All Settings</button>
+                <button class="button secondary" id="saveSettingsBtn">💾 Save Settings</button>
+                <button class="button secondary" id="clearSettingsBtn">🗑️ Clear All Settings</button>
             </div>
         </div>
     </div>
@@ -345,10 +345,29 @@
         Office.onReady((info) => {
             if (info.host === Office.HostType.Excel) {
                 loadSettings();
+                setupEventListeners();
                 console.log('Lyric Excel Add-in loaded successfully');
                 showDebugInfo('Add-in initialized successfully');
             }
         });
+
+        // Setup all event listeners
+        function setupEventListeners() {
+            // Tab switching
+            document.querySelectorAll('.tab').forEach(tab => {
+                tab.addEventListener('click', function() {
+                    switchTab(this.dataset.tab);
+                });
+            });
+
+            // Button event listeners
+            document.getElementById('testConnectionBtn').addEventListener('click', testConnection);
+            document.getElementById('debugConnectionBtn').addEventListener('click', debugConnection);
+            document.getElementById('loadTablesBtn').addEventListener('click', loadTables);
+            document.getElementById('importDataBtn').addEventListener('click', importData);
+            document.getElementById('saveSettingsBtn').addEventListener('click', saveSettings);
+            document.getElementById('clearSettingsBtn').addEventListener('click', clearSettings);
+        }
 
         // Debug info display
         function showDebugInfo(message) {
@@ -371,7 +390,7 @@
 
             // Show selected tab
             document.getElementById(tabName + '-tab').classList.add('active');
-            document.querySelector(`[onclick="switchTab('${tabName}')"]`).classList.add('active');
+            document.querySelector(`[data-tab="${tabName}"]`).classList.add('active');
         }
 
         // Get API base URL based on proxy setting
