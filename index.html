@@ -564,9 +564,8 @@
             showDebugInfo('Starting connection test...');
             
             try {
-                // Clean up the base URL and set API endpoint
-                const cleanUrl = baseUrl.replace(/\/$/, '');
-                lyricAPI.baseUrl = cleanUrl + '/lyapi';
+                // Update API URL based on proxy setting
+                updateApiUrl();
                 const fullUrl = `${lyricAPI.baseUrl}/tokens/create-token`;
 
                 showDebugInfo(`Connecting to: ${fullUrl}`);
@@ -589,7 +588,26 @@
                 showDebugInfo(`Response status: ${response.status} ${response.statusText}`);
                 showDebugInfo(`Response headers: ${JSON.stringify([...response.headers.entries()])}`);
 
-                if (!response.ok) {
+                if (response.ok) {
+                    const data = await response.json();
+                    showDebugInfo(`Response data keys: ${Object.keys(data).join(', ')}`);
+                    
+                    if (!data['access-token']) {
+                        throw new Error('No access token received in response');
+                    }
+
+                    lyricAPI.token = data['access-token'];
+                    lyricAPI.clientId = clientId;
+                    lyricAPI.clientSecret = clientSecret;
+                    lyricAPI.useBasicAuth = false;
+
+                    showDebugInfo(`Token received: ${lyricAPI.token.substring(0, 20)}...`);
+                    showStatus(`✅ Connection successful to ${baseUrl}!`, 'success');
+                    switchTab('data');
+                    
+                    // Auto-save connection settings
+                    saveSettings();
+                } else {
                     const errorText = await response.text();
                     showDebugInfo(`Error response body: ${errorText}`);
                     
@@ -608,24 +626,24 @@
                     throw new Error(`Authentication failed: ${response.status} ${response.statusText}. Details: ${errorText}`);
                 }
 
-                const data = await response.json();
-                showDebugInfo(`Response data keys: ${Object.keys(data).join(', ')}`);
-                
-                if (!data['access-token']) {
-                    throw new Error('No access token received in response');
+                } else {
+                    const errorText = await response.text();
+                    showDebugInfo(`Error response body: ${errorText}`);
+                    
+                    // If token creation fails, try Basic Auth approach for other endpoints
+                    if (response.status === 401) {
+                        showDebugInfo('Token auth failed, will use Basic Auth for subsequent requests');
+                        lyricAPI.clientId = clientId;
+                        lyricAPI.clientSecret = clientSecret;
+                        lyricAPI.useBasicAuth = true;
+                        showStatus(`✅ Connection configured with Basic Auth for ${baseUrl}!`, 'success');
+                        switchTab('data');
+                        saveSettings();
+                        return;
+                    }
+                    
+                    throw new Error(`Authentication failed: ${response.status} ${response.statusText}. Details: ${errorText}`);
                 }
-
-                lyricAPI.token = data['access-token'];
-                lyricAPI.clientId = clientId;
-                lyricAPI.clientSecret = clientSecret;
-                lyricAPI.useBasicAuth = false;
-
-                showDebugInfo(`Token received: ${lyricAPI.token.substring(0, 20)}...`);
-                showStatus(`✅ Connection successful to ${cleanUrl}!`, 'success');
-                switchTab('data');
-                
-                // Auto-save connection settings
-                saveSettings();
 
             } catch (error) {
                 console.error('Connection test failed:', error);
@@ -886,16 +904,14 @@ Possible causes:
                     
                     document.getElementById('baseUrl').value = settings.baseUrl || '';
                     document.getElementById('clientId').value = settings.clientId || '';
+                    document.getElementById('useProxy').checked = settings.useProxy || false;
                     document.getElementById('worksheetName').value = settings.worksheetName || 'Lyric Data';
                     document.getElementById('startCell').value = settings.startCell || 'A1';
                     document.getElementById('clearExisting').checked = settings.clearExisting !== false;
                     document.getElementById('autoRefresh').checked = settings.autoRefresh || false;
 
                     // Set base URL if available
-                    if (settings.baseUrl) {
-                        const cleanUrl = settings.baseUrl.replace(/\/$/, '');
-                        lyricAPI.baseUrl = cleanUrl + '/lyapi';
-                    }
+                    updateApiUrl();
                     
                 } catch (error) {
                     console.error('Failed to load settings:', error);
