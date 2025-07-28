@@ -129,17 +129,6 @@
             border: 1px solid #bee5eb;
         }
 
-        .debug-info {
-            background-color: #f8f9fa;
-            border: 1px solid #dee2e6;
-            border-radius: 4px;
-            padding: 10px;
-            margin-top: 10px;
-            font-family: 'Courier New', monospace;
-            font-size: 12px;
-            display: none;
-        }
-
         .help-text {
             font-size: 12px;
             color: #666;
@@ -226,7 +215,6 @@
         </div>
 
         <div class="status" id="status"></div>
-        <div class="debug-info" id="debugInfo"></div>
         <div class="loading" id="loading">
             <div class="spinner"></div>
             <div>Connecting to Lyric API...</div>
@@ -267,7 +255,6 @@
                 </div>
 
                 <button class="button" onclick="testConnection()">🔍 Test Connection</button>
-                <button class="button secondary" onclick="debugConnection()">🔧 Debug Connection</button>
             </div>
 
             <!-- Data Tab -->
@@ -337,8 +324,7 @@
             baseUrl: '',
             token: '',
             clientId: '',
-            clientSecret: '',
-            useBasicAuth: false
+            clientSecret: ''
         };
 
         // Initialize Office Add-in
@@ -346,18 +332,8 @@
             if (info.host === Office.HostType.Excel) {
                 loadSettings();
                 console.log('Lyric Excel Add-in loaded successfully');
-                showDebugInfo('Add-in initialized successfully');
             }
         });
-
-        // Debug info display
-        function showDebugInfo(message) {
-            const debugDiv = document.getElementById('debugInfo');
-            const timestamp = new Date().toLocaleTimeString();
-            debugDiv.innerHTML += `[${timestamp}] ${message}\n`;
-            debugDiv.style.display = 'block';
-            console.log(`[DEBUG] ${message}`);
-        }
 
         // Tab switching
         function switchTab(tabName) {
@@ -400,7 +376,7 @@
             if (type === 'success' || type === 'error') {
                 setTimeout(() => {
                     status.style.display = 'none';
-                }, 10000);
+                }, 5000);
             }
         }
 
@@ -409,50 +385,7 @@
             document.getElementById('loading').style.display = loading ? 'block' : 'none';
         }
 
-        // Debug connection function
-        async function debugConnection() {
-            const baseUrl = document.getElementById('baseUrl').value.trim();
-            
-            if (!baseUrl) {
-                showStatus('Please enter your Lyric environment URL first', 'error');
-                return;
-            }
-
-            const apiBaseUrl = getApiBaseUrl();
-            const fullApiUrl = apiBaseUrl + '/tokens/create-token';
-            
-            showDebugInfo(`Starting connection debug...`);
-            showDebugInfo(`Base URL: ${baseUrl}`);
-            showDebugInfo(`API Base URL: ${apiBaseUrl}`);
-            showDebugInfo(`Full API URL: ${fullApiUrl}`);
-            
-            setLoading(true);
-
-            try {
-                // Test basic connectivity with OPTIONS request
-                showDebugInfo('Testing CORS preflight...');
-                const corsResponse = await fetch(fullApiUrl, {
-                    method: 'OPTIONS',
-                    headers: {
-                        'Access-Control-Request-Method': 'POST',
-                        'Access-Control-Request-Headers': 'Content-Type'
-                    }
-                });
-                
-                showDebugInfo(`CORS preflight status: ${corsResponse.status}`);
-                showDebugInfo(`CORS headers: ${JSON.stringify([...corsResponse.headers.entries()])}`);
-                
-                showStatus('Debug information collected. Check the debug panel below.', 'info');
-                
-            } catch (error) {
-                showDebugInfo(`Debug error: ${error.name} - ${error.message}`);
-                showStatus(`Debug failed: ${error.message}`, 'error');
-            } finally {
-                setLoading(false);
-            }
-        }
-
-        // Test connection function
+        // Test connection function - ONLY CHANGE: Added Basic Auth
         async function testConnection() {
             const baseUrl = document.getElementById('baseUrl').value.trim();
             const clientId = document.getElementById('clientId').value;
@@ -477,21 +410,14 @@
             }
 
             setLoading(true);
-            showDebugInfo('Starting connection test...');
             
             try {
                 const apiBaseUrl = getApiBaseUrl();
                 const fullUrl = `${apiBaseUrl}/tokens/create-token`;
 
-                showDebugInfo(`Connecting to: ${fullUrl}`);
-                showDebugInfo(`Client ID: ${clientId.substring(0, 8)}...`);
-                showDebugInfo(`Using proxy: ${document.getElementById('useProxy').checked}`);
-
-                // The API expects Basic Auth (Base64 encoded clientId:clientSecret)
+                // ONLY CHANGE: Use Basic Auth instead of JSON body
                 const basicAuthCredentials = btoa(clientId + ':' + clientSecret);
-                showDebugInfo(`Basic Auth header: Basic ${basicAuthCredentials.substring(0, 20)}...`);
 
-                // Test connection by getting token
                 const response = await fetch(fullUrl, {
                     method: 'POST',
                     headers: {
@@ -499,22 +425,16 @@
                         'Content-Type': 'application/json',
                         'Accept': 'application/json'
                     },
-                    // Don't send clientId/clientSecret in body - use Basic Auth instead
                     body: JSON.stringify({}),
                     mode: 'cors'
                 });
 
-                showDebugInfo(`Response status: ${response.status} ${response.statusText}`);
-                showDebugInfo(`Response headers: ${JSON.stringify([...response.headers.entries()])}`);
-
                 if (!response.ok) {
                     const errorText = await response.text();
-                    showDebugInfo(`Error response body: ${errorText}`);
                     throw new Error(`Authentication failed: ${response.status} ${response.statusText}. Details: ${errorText}`);
                 }
 
                 const data = await response.json();
-                showDebugInfo(`Response data keys: ${Object.keys(data).join(', ')}`);
                 
                 if (!data['access-token']) {
                     throw new Error('No access token received in response');
@@ -525,7 +445,6 @@
                 lyricAPI.clientSecret = clientSecret;
                 lyricAPI.baseUrl = apiBaseUrl;
 
-                showDebugInfo(`Token received: ${lyricAPI.token.substring(0, 20)}...`);
                 showStatus(`✅ Connection successful!`, 'success');
                 switchTab('data');
                 
@@ -534,16 +453,9 @@
 
             } catch (error) {
                 console.error('Connection test failed:', error);
-                showDebugInfo(`Connection failed: ${error.name} - ${error.message}`);
                 
-                // Provide more specific error messages
                 if (error.name === 'TypeError' && error.message.includes('fetch')) {
-                    showStatus(`❌ Network error: Cannot reach ${getApiBaseUrl()}. 
-Possible causes:
-1. URL is incorrect
-2. Server is down
-3. CORS not configured (try enabling proxy)
-4. Proxy server not running (if using proxy)`, 'error');
+                    showStatus(`❌ Network error: Cannot reach ${getApiBaseUrl()}. Try enabling CORS proxy if available.`, 'error');
                 } else {
                     showStatus(`❌ Connection failed: ${error.message}`, 'error');
                 }
@@ -567,7 +479,6 @@ Possible causes:
             }
 
             setLoading(true);
-            showDebugInfo(`Loading tables for app: ${appSlug}`);
 
             try {
                 const response = await fetch(`${lyricAPI.baseUrl}/table/${appSlug}`, {
@@ -577,17 +488,12 @@ Possible causes:
                     }
                 });
 
-                showDebugInfo(`Tables response status: ${response.status}`);
-
                 if (!response.ok) {
                     const errorText = await response.text();
-                    showDebugInfo(`Tables error: ${errorText}`);
                     throw new Error(`Failed to load tables: ${response.status} ${response.statusText}`);
                 }
 
                 const tables = await response.json();
-                showDebugInfo(`Tables data: ${JSON.stringify(tables, null, 2)}`);
-                
                 const select = document.getElementById('tableIds');
                 select.innerHTML = '';
 
@@ -606,7 +512,6 @@ Possible causes:
 
             } catch (error) {
                 console.error('Failed to load tables:', error);
-                showDebugInfo(`Load tables failed: ${error.message}`);
                 showStatus(`Failed to load tables: ${error.message}`, 'error');
             } finally {
                 setLoading(false);
@@ -782,11 +687,7 @@ Possible causes:
                 document.getElementById('autoRefresh').checked = false;
                 
                 // Clear API object
-                lyricAPI = { baseUrl: '', token: '', clientId: '', clientSecret: '', useBasicAuth: false };
-                
-                // Clear debug info
-                document.getElementById('debugInfo').innerHTML = '';
-                document.getElementById('debugInfo').style.display = 'none';
+                lyricAPI = { baseUrl: '', token: '', clientId: '', clientSecret: '' };
                 
                 showStatus('All settings cleared', 'info');
             }
