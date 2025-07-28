@@ -671,22 +671,30 @@
             }
         }
 
-        // Save settings to Office storage
+        // Save settings to Office storage (with error checking)
         function saveSettings() {
-            const settings = {
-                baseUrl: document.getElementById('baseUrl').value,
-                clientId: document.getElementById('clientId').value,
-                useProxy: document.getElementById('useProxy').checked,
-                worksheetName: document.getElementById('worksheetName').value,
-                startCell: document.getElementById('startCell').value,
-                clearExisting: document.getElementById('clearExisting').checked,
-                autoRefresh: document.getElementById('autoRefresh').checked
-            };
+            try {
+                if (Office && Office.context && Office.context.document && Office.context.document.settings) {
+                    const settings = {
+                        baseUrl: document.getElementById('baseUrl').value,
+                        clientId: document.getElementById('clientId').value,
+                        useProxy: document.getElementById('useProxy').checked,
+                        worksheetName: document.getElementById('worksheetName').value,
+                        startCell: document.getElementById('startCell').value,
+                        clearExisting: document.getElementById('clearExisting').checked,
+                        autoRefresh: document.getElementById('autoRefresh').checked
+                    };
 
-            Office.context.document.settings.set('lyricSettings', JSON.stringify(settings));
-            Office.context.document.settings.saveAsync();
-            
-            showStatus('Settings saved successfully', 'success');
+                    Office.context.document.settings.set('lyricSettings', JSON.stringify(settings));
+                    Office.context.document.settings.saveAsync();
+                    
+                    console.log('Settings saved successfully');
+                } else {
+                    console.log('Office context not available - settings not saved (normal when testing outside Excel)');
+                }
+            } catch (error) {
+                console.log('Error saving settings:', error.message);
+            }
         }
 
         // Load settings from Office storage
