@@ -260,6 +260,7 @@
                 </div>
 
                 <button class="button" onclick="testConnection()">🔍 Test Connection</button>
+                <button class="button secondary" onclick="testBasicAuth()">🔐 Try Basic Auth</button>
                 <button class="button secondary" onclick="debugConnection()">🔧 Debug Connection</button>
             </div>
 
@@ -330,7 +331,8 @@
             baseUrl: '',
             token: '',
             clientId: '',
-            clientSecret: ''
+            clientSecret: '',
+            useBasicAuth: false
         };
 
         // Initialize Office Add-in
@@ -449,7 +451,69 @@
             }
         }
 
-        // Enhanced test connection function
+        // Test Basic Auth directly (skip token creation)
+        async function testBasicAuth() {
+            const baseUrl = document.getElementById('baseUrl').value.trim();
+            const clientId = document.getElementById('clientId').value;
+            const clientSecret = document.getElementById('clientSecret').value;
+
+            if (!baseUrl || !clientId || !clientSecret) {
+                showStatus('Please fill in all required fields', 'error');
+                return;
+            }
+
+            setLoading(true);
+            showDebugInfo('Testing Basic Auth directly...');
+            
+            try {
+                const cleanUrl = baseUrl.replace(/\/$/, '');
+                lyricAPI.baseUrl = cleanUrl + '/lyapi';
+                
+                // Test Basic Auth by trying to load a simple endpoint
+                const testUrl = `${lyricAPI.baseUrl}/health`;
+                const basicAuthHeader = btoa(clientId + ':' + clientSecret);
+                
+                showDebugInfo(`Testing Basic Auth with: ${testUrl}`);
+                showDebugInfo(`Auth header: Basic ${basicAuthHeader.substring(0, 20)}...`);
+
+                const response = await fetch(testUrl, {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Basic ${basicAuthHeader}`,
+                        'Accept': 'application/json'
+                    },
+                    mode: 'cors'
+                });
+
+                showDebugInfo(`Basic Auth response status: ${response.status}`);
+                showDebugInfo(`Basic Auth response headers: ${JSON.stringify([...response.headers.entries()])}`);
+
+                if (response.ok) {
+                    lyricAPI.clientId = clientId;
+                    lyricAPI.clientSecret = clientSecret;
+                    lyricAPI.useBasicAuth = true;
+                    lyricAPI.token = ''; // Clear any existing token
+                    
+                    showDebugInfo('✅ Basic Auth successful!');
+                    showStatus(`✅ Basic Auth connection successful to ${cleanUrl}!`, 'success');
+                    switchTab('data');
+                    saveSettings();
+                } else {
+                    const errorText = await response.text();
+                    showDebugInfo(`Basic Auth error: ${errorText}`);
+                    throw new Error(`Basic Auth failed: ${response.status} ${response.statusText}`);
+                }
+
+            } catch (error) {
+                console.error('Basic Auth test failed:', error);
+                showDebugInfo(`Basic Auth failed: ${error.name} - ${error.message}`);
+                showStatus(`❌ Basic Auth failed: ${error.message}`, 'error');
+            } finally {
+                setLoading(false);
+            }
+        }
+
+        // Enhanced test connection function with Basic Auth fallback
         async function testConnection() {
             const baseUrl = document.getElementById('baseUrl').value.trim();
             const clientId = document.getElementById('clientId').value;
@@ -505,6 +569,19 @@
                 if (!response.ok) {
                     const errorText = await response.text();
                     showDebugInfo(`Error response body: ${errorText}`);
+                    
+                    // If token creation fails, try Basic Auth approach for other endpoints
+                    if (response.status === 401) {
+                        showDebugInfo('Token auth failed, will use Basic Auth for subsequent requests');
+                        lyricAPI.clientId = clientId;
+                        lyricAPI.clientSecret = clientSecret;
+                        lyricAPI.useBasicAuth = true;
+                        showStatus(`✅ Connection configured with Basic Auth for ${cleanUrl}!`, 'success');
+                        switchTab('data');
+                        saveSettings();
+                        return;
+                    }
+                    
                     throw new Error(`Authentication failed: ${response.status} ${response.statusText}. Details: ${errorText}`);
                 }
 
@@ -518,6 +595,7 @@
                 lyricAPI.token = data['access-token'];
                 lyricAPI.clientId = clientId;
                 lyricAPI.clientSecret = clientSecret;
+                lyricAPI.useBasicAuth = false;
 
                 showDebugInfo(`Token received: ${lyricAPI.token.substring(0, 20)}...`);
                 showStatus(`✅ Connection successful to ${cleanUrl}!`, 'success');
@@ -548,7 +626,7 @@ Possible causes:
             }
         }
 
-        // Load available tables
+        // Load available tables with auth support
         async function loadTables() {
             const appSlug = document.getElementById('appSlug').value;
             
@@ -557,7 +635,7 @@ Possible causes:
                 return;
             }
 
-            if (!lyricAPI.token) {
+            if (!lyricAPI.token && !lyricAPI.useBasicAuth) {
                 showStatus('Please test connection first', 'error');
                 return;
             }
@@ -566,10 +644,17 @@ Possible causes:
             showDebugInfo(`Loading tables for app: ${appSlug}`);
 
             try {
+                const headers = { 'Accept': 'application/json' };
+                
+                // Use appropriate authentication method
+                if (lyricAPI.useBasicAuth) {
+                    headers['Authorization'] = `Basic ${btoa(lyricAPI.clientId + ':' + lyricAPI.clientSecret)}`;
+                } else {
+                    headers['Authorization'] = `Bearer ${lyricAPI.token}`;
+                }
+
                 const response = await fetch(`${lyricAPI.baseUrl}/table/${appSlug}`, {
-                    headers: {
-                        'Authorization': `Bearer ${lyricAPI.token}`
-                    }
+                    headers: headers
                 });
 
                 showDebugInfo(`Tables response status: ${response.status}`);
@@ -619,20 +704,28 @@ Possible causes:
                 return;
             }
 
-            if (!lyricAPI.token) {
+            if (!lyricAPI.token && !lyricAPI.useBasicAuth) {
                 await refreshToken();
             }
 
             setLoading(true);
 
             try {
+                const headers = {
+                    'Content-Type': 'application/json'
+                };
+                
+                // Use appropriate authentication method
+                if (lyricAPI.useBasicAuth) {
+                    headers['Authorization'] = `Basic ${btoa(lyricAPI.clientId + ':' + lyricAPI.clientSecret)}`;
+                } else {
+                    headers['Authorization'] = `Bearer ${lyricAPI.token}`;
+                }
+
                 // Download data
                 const response = await fetch(`${lyricAPI.baseUrl}/table/download/${appSlug}`, {
                     method: 'POST',
-                    headers: {
-                        'Authorization': `Bearer ${lyricAPI.token}`,
-                        'Content-Type': 'application/json'
-                    },
+                    headers: headers,
                     body: JSON.stringify({
                         downloadFormat: format,
                         tableIds: selectedTables
