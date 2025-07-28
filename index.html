@@ -243,7 +243,7 @@
             <div class="tab-content active" id="connect-tab">
                 <div class="form-group">
                     <label for="useProxy">
-                        <input type="checkbox" id="useProxy"> Use CORS Proxy (for development)
+                        <input type="checkbox" id="useProxy"> Use CORS Proxy (localhost:3000)
                     </label>
                     <div class="help-text">Check this if you're running a local CORS proxy server</div>
                 </div>
@@ -267,7 +267,6 @@
                 </div>
 
                 <button class="button" onclick="testConnection()">🔍 Test Connection</button>
-                <button class="button secondary" onclick="testBasicAuth()">🔐 Try Basic Auth</button>
                 <button class="button secondary" onclick="debugConnection()">🔧 Debug Connection</button>
             </div>
 
@@ -372,35 +371,22 @@
 
             // Show selected tab
             document.getElementById(tabName + '-tab').classList.add('active');
-            event.target.classList.add('active');
+            document.querySelector(`[onclick="switchTab('${tabName}')"]`).classList.add('active');
         }
 
-        // Base URL change handler with proxy support
-        document.getElementById('baseUrl').addEventListener('input', function() {
-            updateApiUrl();
-        });
-
-        document.getElementById('useProxy').addEventListener('change', function() {
-            updateApiUrl();
-        });
-
-        function updateApiUrl() {
-            const url = document.getElementById('baseUrl').value.trim();
+        // Get API base URL based on proxy setting
+        function getApiBaseUrl() {
+            const baseUrl = document.getElementById('baseUrl').value.trim();
             const useProxy = document.getElementById('useProxy').checked;
             
-            if (url) {
-                const cleanUrl = url.replace(/\/$/, '');
-                if (useProxy) {
-                    // Use local CORS proxy
-                    lyricAPI.baseUrl = 'http://localhost:3000/api';
-                    showDebugInfo(`Using CORS proxy: ${lyricAPI.baseUrl}`);
-                } else {
-                    // Use direct API
-                    lyricAPI.baseUrl = cleanUrl + '/lyapi';
-                    showDebugInfo(`Base URL set to: ${lyricAPI.baseUrl}`);
-                }
+            if (!baseUrl) return '';
+            
+            const cleanUrl = baseUrl.replace(/\/$/, '');
+            
+            if (useProxy) {
+                return 'http://localhost:3000/api';
             } else {
-                lyricAPI.baseUrl = '';
+                return cleanUrl + '/lyapi';
             }
         }
 
@@ -414,7 +400,7 @@
             if (type === 'success' || type === 'error') {
                 setTimeout(() => {
                     status.style.display = 'none';
-                }, 10000); // Show longer for debugging
+                }, 10000);
             }
         }
 
@@ -432,12 +418,12 @@
                 return;
             }
 
-            const cleanUrl = baseUrl.replace(/\/$/, '');
-            const fullApiUrl = cleanUrl + '/lyapi/tokens/create-token';
+            const apiBaseUrl = getApiBaseUrl();
+            const fullApiUrl = apiBaseUrl + '/tokens/create-token';
             
             showDebugInfo(`Starting connection debug...`);
             showDebugInfo(`Base URL: ${baseUrl}`);
-            showDebugInfo(`Clean URL: ${cleanUrl}`);
+            showDebugInfo(`API Base URL: ${apiBaseUrl}`);
             showDebugInfo(`Full API URL: ${fullApiUrl}`);
             
             setLoading(true);
@@ -456,14 +442,6 @@
                 showDebugInfo(`CORS preflight status: ${corsResponse.status}`);
                 showDebugInfo(`CORS headers: ${JSON.stringify([...corsResponse.headers.entries()])}`);
                 
-                // Test basic GET request
-                showDebugInfo('Testing basic GET request...');
-                const getResponse = await fetch(cleanUrl, {
-                    method: 'GET'
-                });
-                
-                showDebugInfo(`GET response status: ${getResponse.status}`);
-                
                 showStatus('Debug information collected. Check the debug panel below.', 'info');
                 
             } catch (error) {
@@ -474,69 +452,7 @@
             }
         }
 
-        // Test Basic Auth directly (skip token creation)
-        async function testBasicAuth() {
-            const baseUrl = document.getElementById('baseUrl').value.trim();
-            const clientId = document.getElementById('clientId').value;
-            const clientSecret = document.getElementById('clientSecret').value;
-
-            if (!baseUrl || !clientId || !clientSecret) {
-                showStatus('Please fill in all required fields', 'error');
-                return;
-            }
-
-            setLoading(true);
-            showDebugInfo('Testing Basic Auth directly...');
-            
-            try {
-                const cleanUrl = baseUrl.replace(/\/$/, '');
-                lyricAPI.baseUrl = cleanUrl + '/lyapi';
-                
-                // Test Basic Auth by trying to load a simple endpoint
-                const testUrl = `${lyricAPI.baseUrl}/health`;
-                const basicAuthHeader = btoa(clientId + ':' + clientSecret);
-                
-                showDebugInfo(`Testing Basic Auth with: ${testUrl}`);
-                showDebugInfo(`Auth header: Basic ${basicAuthHeader.substring(0, 20)}...`);
-
-                const response = await fetch(testUrl, {
-                    method: 'GET',
-                    headers: {
-                        'Authorization': `Basic ${basicAuthHeader}`,
-                        'Accept': 'application/json'
-                    },
-                    mode: 'cors'
-                });
-
-                showDebugInfo(`Basic Auth response status: ${response.status}`);
-                showDebugInfo(`Basic Auth response headers: ${JSON.stringify([...response.headers.entries()])}`);
-
-                if (response.ok) {
-                    lyricAPI.clientId = clientId;
-                    lyricAPI.clientSecret = clientSecret;
-                    lyricAPI.useBasicAuth = true;
-                    lyricAPI.token = ''; // Clear any existing token
-                    
-                    showDebugInfo('✅ Basic Auth successful!');
-                    showStatus(`✅ Basic Auth connection successful to ${cleanUrl}!`, 'success');
-                    switchTab('data');
-                    saveSettings();
-                } else {
-                    const errorText = await response.text();
-                    showDebugInfo(`Basic Auth error: ${errorText}`);
-                    throw new Error(`Basic Auth failed: ${response.status} ${response.statusText}`);
-                }
-
-            } catch (error) {
-                console.error('Basic Auth test failed:', error);
-                showDebugInfo(`Basic Auth failed: ${error.name} - ${error.message}`);
-                showStatus(`❌ Basic Auth failed: ${error.message}`, 'error');
-            } finally {
-                setLoading(false);
-            }
-        }
-
-        // Enhanced test connection function with Basic Auth fallback
+        // Test connection function
         async function testConnection() {
             const baseUrl = document.getElementById('baseUrl').value.trim();
             const clientId = document.getElementById('clientId').value;
@@ -564,12 +480,12 @@
             showDebugInfo('Starting connection test...');
             
             try {
-                // Update API URL based on proxy setting
-                updateApiUrl();
-                const fullUrl = `${lyricAPI.baseUrl}/tokens/create-token`;
+                const apiBaseUrl = getApiBaseUrl();
+                const fullUrl = `${apiBaseUrl}/tokens/create-token`;
 
                 showDebugInfo(`Connecting to: ${fullUrl}`);
                 showDebugInfo(`Client ID: ${clientId.substring(0, 8)}...`);
+                showDebugInfo(`Using proxy: ${document.getElementById('useProxy').checked}`);
 
                 // Test connection by getting token
                 const response = await fetch(fullUrl, {
@@ -588,62 +504,30 @@
                 showDebugInfo(`Response status: ${response.status} ${response.statusText}`);
                 showDebugInfo(`Response headers: ${JSON.stringify([...response.headers.entries()])}`);
 
-                if (response.ok) {
-                    const data = await response.json();
-                    showDebugInfo(`Response data keys: ${Object.keys(data).join(', ')}`);
-                    
-                    if (!data['access-token']) {
-                        throw new Error('No access token received in response');
-                    }
-
-                    lyricAPI.token = data['access-token'];
-                    lyricAPI.clientId = clientId;
-                    lyricAPI.clientSecret = clientSecret;
-                    lyricAPI.useBasicAuth = false;
-
-                    showDebugInfo(`Token received: ${lyricAPI.token.substring(0, 20)}...`);
-                    showStatus(`✅ Connection successful to ${baseUrl}!`, 'success');
-                    switchTab('data');
-                    
-                    // Auto-save connection settings
-                    saveSettings();
-                } else {
+                if (!response.ok) {
                     const errorText = await response.text();
                     showDebugInfo(`Error response body: ${errorText}`);
-                    
-                    // If token creation fails, try Basic Auth approach for other endpoints
-                    if (response.status === 401) {
-                        showDebugInfo('Token auth failed, will use Basic Auth for subsequent requests');
-                        lyricAPI.clientId = clientId;
-                        lyricAPI.clientSecret = clientSecret;
-                        lyricAPI.useBasicAuth = true;
-                        showStatus(`✅ Connection configured with Basic Auth for ${cleanUrl}!`, 'success');
-                        switchTab('data');
-                        saveSettings();
-                        return;
-                    }
-                    
                     throw new Error(`Authentication failed: ${response.status} ${response.statusText}. Details: ${errorText}`);
                 }
 
-                } else {
-                    const errorText = await response.text();
-                    showDebugInfo(`Error response body: ${errorText}`);
-                    
-                    // If token creation fails, try Basic Auth approach for other endpoints
-                    if (response.status === 401) {
-                        showDebugInfo('Token auth failed, will use Basic Auth for subsequent requests');
-                        lyricAPI.clientId = clientId;
-                        lyricAPI.clientSecret = clientSecret;
-                        lyricAPI.useBasicAuth = true;
-                        showStatus(`✅ Connection configured with Basic Auth for ${baseUrl}!`, 'success');
-                        switchTab('data');
-                        saveSettings();
-                        return;
-                    }
-                    
-                    throw new Error(`Authentication failed: ${response.status} ${response.statusText}. Details: ${errorText}`);
+                const data = await response.json();
+                showDebugInfo(`Response data keys: ${Object.keys(data).join(', ')}`);
+                
+                if (!data['access-token']) {
+                    throw new Error('No access token received in response');
                 }
+
+                lyricAPI.token = data['access-token'];
+                lyricAPI.clientId = clientId;
+                lyricAPI.clientSecret = clientSecret;
+                lyricAPI.baseUrl = apiBaseUrl;
+
+                showDebugInfo(`Token received: ${lyricAPI.token.substring(0, 20)}...`);
+                showStatus(`✅ Connection successful!`, 'success');
+                switchTab('data');
+                
+                // Auto-save connection settings
+                saveSettings();
 
             } catch (error) {
                 console.error('Connection test failed:', error);
@@ -651,14 +535,12 @@
                 
                 // Provide more specific error messages
                 if (error.name === 'TypeError' && error.message.includes('fetch')) {
-                    showStatus(`❌ Network error: Cannot reach ${lyricAPI.baseUrl}. 
+                    showStatus(`❌ Network error: Cannot reach ${getApiBaseUrl()}. 
 Possible causes:
 1. URL is incorrect
 2. Server is down
-3. CORS not configured on server
-4. Firewall blocking request`, 'error');
-                } else if (error.message.includes('CORS')) {
-                    showStatus(`❌ CORS error: The server needs to allow requests from Excel add-ins. Contact your Lyric administrator.`, 'error');
+3. CORS not configured (try enabling proxy)
+4. Proxy server not running (if using proxy)`, 'error');
                 } else {
                     showStatus(`❌ Connection failed: ${error.message}`, 'error');
                 }
@@ -667,7 +549,7 @@ Possible causes:
             }
         }
 
-        // Load available tables with auth support
+        // Load available tables
         async function loadTables() {
             const appSlug = document.getElementById('appSlug').value;
             
@@ -676,7 +558,7 @@ Possible causes:
                 return;
             }
 
-            if (!lyricAPI.token && !lyricAPI.useBasicAuth) {
+            if (!lyricAPI.token) {
                 showStatus('Please test connection first', 'error');
                 return;
             }
@@ -685,17 +567,11 @@ Possible causes:
             showDebugInfo(`Loading tables for app: ${appSlug}`);
 
             try {
-                const headers = { 'Accept': 'application/json' };
-                
-                // Use appropriate authentication method
-                if (lyricAPI.useBasicAuth) {
-                    headers['Authorization'] = `Basic ${btoa(lyricAPI.clientId + ':' + lyricAPI.clientSecret)}`;
-                } else {
-                    headers['Authorization'] = `Bearer ${lyricAPI.token}`;
-                }
-
                 const response = await fetch(`${lyricAPI.baseUrl}/table/${appSlug}`, {
-                    headers: headers
+                    headers: {
+                        'Authorization': `Bearer ${lyricAPI.token}`,
+                        'Accept': 'application/json'
+                    }
                 });
 
                 showDebugInfo(`Tables response status: ${response.status}`);
@@ -734,7 +610,7 @@ Possible causes:
             }
         }
 
-        // Import data to Excel (unchanged from original)
+        // Import data to Excel
         async function importData() {
             const appSlug = document.getElementById('appSlug').value;
             const selectedTables = Array.from(document.getElementById('tableIds').selectedOptions).map(opt => opt.value);
@@ -745,28 +621,21 @@ Possible causes:
                 return;
             }
 
-            if (!lyricAPI.token && !lyricAPI.useBasicAuth) {
-                await refreshToken();
+            if (!lyricAPI.token) {
+                showStatus('Please test connection first', 'error');
+                return;
             }
 
             setLoading(true);
 
             try {
-                const headers = {
-                    'Content-Type': 'application/json'
-                };
-                
-                // Use appropriate authentication method
-                if (lyricAPI.useBasicAuth) {
-                    headers['Authorization'] = `Basic ${btoa(lyricAPI.clientId + ':' + lyricAPI.clientSecret)}`;
-                } else {
-                    headers['Authorization'] = `Bearer ${lyricAPI.token}`;
-                }
-
                 // Download data
                 const response = await fetch(`${lyricAPI.baseUrl}/table/download/${appSlug}`, {
                     method: 'POST',
-                    headers: headers,
+                    headers: {
+                        'Authorization': `Bearer ${lyricAPI.token}`,
+                        'Content-Type': 'application/json'
+                    },
                     body: JSON.stringify({
                         downloadFormat: format,
                         tableIds: selectedTables
@@ -853,36 +722,12 @@ Possible causes:
             }
         }
 
-        // Refresh token
-        async function refreshToken() {
-            if (!lyricAPI.clientId || !lyricAPI.clientSecret) {
-                throw new Error('No stored credentials. Please reconnect.');
-            }
-
-            const response = await fetch(`${lyricAPI.baseUrl}/tokens/create-token`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    clientId: lyricAPI.clientId,
-                    clientSecret: lyricAPI.clientSecret
-                })
-            });
-
-            if (!response.ok) {
-                throw new Error('Token refresh failed');
-            }
-
-            const data = await response.json();
-            lyricAPI.token = data['access-token'];
-        }
-
         // Save settings to Office storage
         function saveSettings() {
             const settings = {
                 baseUrl: document.getElementById('baseUrl').value,
                 clientId: document.getElementById('clientId').value,
+                useProxy: document.getElementById('useProxy').checked,
                 worksheetName: document.getElementById('worksheetName').value,
                 startCell: document.getElementById('startCell').value,
                 clearExisting: document.getElementById('clearExisting').checked,
@@ -909,9 +754,6 @@ Possible causes:
                     document.getElementById('startCell').value = settings.startCell || 'A1';
                     document.getElementById('clearExisting').checked = settings.clearExisting !== false;
                     document.getElementById('autoRefresh').checked = settings.autoRefresh || false;
-
-                    // Set base URL if available
-                    updateApiUrl();
                     
                 } catch (error) {
                     console.error('Failed to load settings:', error);
@@ -929,6 +771,7 @@ Possible causes:
                 document.getElementById('baseUrl').value = '';
                 document.getElementById('clientId').value = '';
                 document.getElementById('clientSecret').value = '';
+                document.getElementById('useProxy').checked = false;
                 document.getElementById('appSlug').value = '';
                 document.getElementById('worksheetName').value = 'Lyric Data';
                 document.getElementById('startCell').value = 'A1';
@@ -936,7 +779,7 @@ Possible causes:
                 document.getElementById('autoRefresh').checked = false;
                 
                 // Clear API object
-                lyricAPI = { baseUrl: '', token: '', clientId: '', clientSecret: '' };
+                lyricAPI = { baseUrl: '', token: '', clientId: '', clientSecret: '', useBasicAuth: false };
                 
                 // Clear debug info
                 document.getElementById('debugInfo').innerHTML = '';
@@ -945,18 +788,6 @@ Possible causes:
                 showStatus('All settings cleared', 'info');
             }
         }
-
-        // Auto-refresh functionality
-        setInterval(async () => {
-            const autoRefresh = document.getElementById('autoRefresh').checked;
-            const appSlug = document.getElementById('appSlug').value;
-            const selectedTables = Array.from(document.getElementById('tableIds').selectedOptions).map(opt => opt.value);
-            
-            if (autoRefresh && appSlug && selectedTables.length > 0 && lyricAPI.token) {
-                console.log('Auto-refreshing data...');
-                await importData();
-            }
-        }, 30 * 60 * 1000); // 30 minutes
     </script>
 </body>
 </html>
