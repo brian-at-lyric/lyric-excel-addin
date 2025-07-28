@@ -389,11 +389,18 @@
         function debugLog(message) {
             console.log(message);
             const debugDiv = document.getElementById('debugInfo');
-            debugDiv.innerHTML += message + '\n';
+            const timestamp = new Date().toLocaleTimeString();
+            debugDiv.innerHTML += `[${timestamp}] ${message}\n`;
             debugDiv.style.display = 'block';
+            // Scroll to bottom
+            debugDiv.scrollTop = debugDiv.scrollHeight;
         }
 
-        // Focused test for Method 4 with detailed debugging
+        function clearDebug() {
+            document.getElementById('debugInfo').innerHTML = '';
+        }
+
+        // Simpler, more focused test
         async function testConnection() {
             const baseUrl = document.getElementById('baseUrl').value.trim();
             const clientId = document.getElementById('clientId').value;
@@ -404,36 +411,31 @@
                 return;
             }
 
-            // Clear previous debug info
-            document.getElementById('debugInfo').innerHTML = '';
-            
             setLoading(true);
             
             const apiBaseUrl = getApiBaseUrl();
             const fullUrl = `${apiBaseUrl}/tokens/create-token`;
             
-            // Method 4: Basic Auth header + JSON body with detailed logging
+            debugLog('🚀 STARTING CONNECTION TEST');
+            debugLog(`URL: ${fullUrl}`);
+            debugLog(`Client ID: ${clientId}`);
+            debugLog(`Client Secret: ${clientSecret.substring(0, 8)}... (${clientSecret.length} chars)`);
+            
+            // Create Base64 credentials
+            const combined = clientId + ':' + clientSecret;
+            const basicAuth = btoa(combined);
+            
+            debugLog(`Combined: ${clientId}:${clientSecret.substring(0, 8)}...`);
+            debugLog(`Base64: ${basicAuth}`);
+            debugLog(`Decoded: ${atob(basicAuth)}`);
+            
             try {
-                showStatus('Testing: Basic Auth + JSON body', 'info');
-                
-                // Create Base64 credentials with detailed logging
-                const combined = clientId + ':' + clientSecret;
-                const basicAuth = btoa(combined);
-                
-                debugLog('=== AUTHENTICATION DEBUG ===');
-                debugLog(`Client ID: ${clientId}`);
-                debugLog(`Client Secret (first 8 chars): ${clientSecret.substring(0, 8)}...`);
-                debugLog(`Combined string: ${clientId}:${clientSecret.substring(0, 8)}...`);
-                debugLog(`Base64 encoded: ${basicAuth}`);
-                debugLog(`Decoded back: ${atob(basicAuth)}`);
-                debugLog(`URL: ${fullUrl}`);
+                debugLog('📤 SENDING REQUEST...');
                 
                 const requestBody = {
                     clientId: clientId,
                     clientSecret: clientSecret
                 };
-                
-                debugLog(`Request body: ${JSON.stringify(requestBody, null, 2)}`);
                 
                 const response = await fetch(fullUrl, {
                     method: 'POST',
@@ -446,13 +448,13 @@
                     mode: 'cors'
                 });
 
-                debugLog(`Response status: ${response.status}`);
-                debugLog(`Response headers: ${JSON.stringify([...response.headers.entries()], null, 2)}`);
+                debugLog(`📥 RESPONSE: ${response.status} ${response.statusText}`);
                 
                 const responseText = await response.text();
                 debugLog(`Response body: ${responseText}`);
 
                 if (response.ok) {
+                    debugLog('✅ SUCCESS!');
                     const data = JSON.parse(responseText);
                     if (data['access-token']) {
                         lyricAPI.token = data['access-token'];
@@ -464,28 +466,17 @@
                         saveSettings();
                         return;
                     }
+                } else {
+                    debugLog('❌ FAILED - Authentication error');
+                    showStatus(`❌ Failed: ${response.status} - ${responseText}`, 'error');
                 }
 
-                // If we get here, it failed
-                showStatus(`❌ Failed: ${response.status} - ${responseText}`, 'error');
-                
-                // Additional debugging: Let's try manually creating the Base64
-                debugLog('=== MANUAL BASE64 TEST ===');
-                const manualBase64 = btoa(clientId + ':' + clientSecret);
-                debugLog(`Manual Base64: ${manualBase64}`);
-                debugLog(`Are they the same? ${basicAuth === manualBase64}`);
-                
-                // Test if credentials have hidden characters
-                debugLog(`Client ID length: ${clientId.length}`);
-                debugLog(`Client Secret length: ${clientSecret.length}`);
-                debugLog(`Client ID bytes: ${[...clientId].map(c => c.charCodeAt(0)).join(',')}`);
-                debugLog(`Client Secret bytes (first 8): ${[...clientSecret.substring(0, 8)].map(c => c.charCodeAt(0)).join(',')}`);
-
             } catch (error) {
-                debugLog(`Request failed: ${error.message}`);
+                debugLog(`💥 ERROR: ${error.message}`);
                 showStatus(`❌ Request error: ${error.message}`, 'error');
             } finally {
                 setLoading(false);
+                debugLog('🏁 TEST COMPLETE');
             }
         }
 
