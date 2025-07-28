@@ -242,6 +242,13 @@
             <!-- Connect Tab -->
             <div class="tab-content active" id="connect-tab">
                 <div class="form-group">
+                    <label for="useProxy">
+                        <input type="checkbox" id="useProxy"> Use CORS Proxy (for development)
+                    </label>
+                    <div class="help-text">Check this if you're running a local CORS proxy server</div>
+                </div>
+
+                <div class="form-group">
                     <label for="baseUrl">Lyric Environment URL</label>
                     <input type="text" id="baseUrl" placeholder="https://trial1.studio.lyric.tech" value="">
                     <div class="help-text">Enter your complete Lyric environment URL (without /lyapi)</div>
@@ -368,18 +375,34 @@
             event.target.classList.add('active');
         }
 
-        // Base URL change handler
+        // Base URL change handler with proxy support
         document.getElementById('baseUrl').addEventListener('input', function() {
-            const url = this.value.trim();
+            updateApiUrl();
+        });
+
+        document.getElementById('useProxy').addEventListener('change', function() {
+            updateApiUrl();
+        });
+
+        function updateApiUrl() {
+            const url = document.getElementById('baseUrl').value.trim();
+            const useProxy = document.getElementById('useProxy').checked;
+            
             if (url) {
-                // Remove trailing slash if present
                 const cleanUrl = url.replace(/\/$/, '');
-                lyricAPI.baseUrl = cleanUrl + '/lyapi';
-                showDebugInfo(`Base URL set to: ${lyricAPI.baseUrl}`);
+                if (useProxy) {
+                    // Use local CORS proxy
+                    lyricAPI.baseUrl = 'http://localhost:3000/api';
+                    showDebugInfo(`Using CORS proxy: ${lyricAPI.baseUrl}`);
+                } else {
+                    // Use direct API
+                    lyricAPI.baseUrl = cleanUrl + '/lyapi';
+                    showDebugInfo(`Base URL set to: ${lyricAPI.baseUrl}`);
+                }
             } else {
                 lyricAPI.baseUrl = '';
             }
-        });
+        }
 
         // Show status message
         function showStatus(message, type = 'info') {
