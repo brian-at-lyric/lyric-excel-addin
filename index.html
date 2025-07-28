@@ -347,7 +347,14 @@
 
             // Show selected tab
             document.getElementById(tabName + '-tab').classList.add('active');
-            event.target.classList.add('active');
+            
+            // Find and activate the correct tab button
+            const tabButtons = document.querySelectorAll('.tab');
+            tabButtons.forEach(button => {
+                if (button.textContent.toLowerCase() === tabName.toLowerCase()) {
+                    button.classList.add('active');
+                }
+            });
         }
 
         // Get API base URL based on proxy setting
