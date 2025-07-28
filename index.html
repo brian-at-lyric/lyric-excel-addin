@@ -385,38 +385,28 @@
             document.getElementById('loading').style.display = loading ? 'block' : 'none';
         }
 
-        // Test connection function - ONLY CHANGE: Added Basic Auth
+        // Comprehensive test function to try all possible auth methods
         async function testConnection() {
             const baseUrl = document.getElementById('baseUrl').value.trim();
             const clientId = document.getElementById('clientId').value;
             const clientSecret = document.getElementById('clientSecret').value;
 
-            if (!baseUrl) {
-                showStatus('Please enter your Lyric environment URL', 'error');
-                return;
-            }
-
-            if (!clientId || !clientSecret) {
-                showStatus('Please enter both Client ID and Client Secret', 'error');
-                return;
-            }
-
-            // Validate URL format
-            try {
-                new URL(baseUrl);
-            } catch {
-                showStatus('Please enter a valid URL (e.g., https://trial1.studio.lyric.tech)', 'error');
+            if (!baseUrl || !clientId || !clientSecret) {
+                showStatus('Please fill in all fields', 'error');
                 return;
             }
 
             setLoading(true);
             
+            const apiBaseUrl = getApiBaseUrl();
+            const fullUrl = `${apiBaseUrl}/tokens/create-token`;
+            
+            showStatus('Testing multiple authentication methods...', 'info');
+            
+            // Test Method 1: Original JSON body (per documentation)
             try {
-                const apiBaseUrl = getApiBaseUrl();
-                const fullUrl = `${apiBaseUrl}/tokens/create-token`;
-
-                // Use original JSON body approach - no Basic Auth needed
-                const response = await fetch(fullUrl, {
+                showStatus('Method 1: JSON body only (per docs)', 'info');
+                const response1 = await fetch(fullUrl, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -429,39 +419,130 @@
                     mode: 'cors'
                 });
 
-                if (!response.ok) {
-                    const errorText = await response.text();
-                    throw new Error(`Authentication failed: ${response.status} ${response.statusText}. Details: ${errorText}`);
-                }
-
-                const data = await response.json();
-                
-                if (!data['access-token']) {
-                    throw new Error('No access token received in response');
-                }
-
-                lyricAPI.token = data['access-token'];
-                lyricAPI.clientId = clientId;
-                lyricAPI.clientSecret = clientSecret;
-                lyricAPI.baseUrl = apiBaseUrl;
-
-                showStatus(`✅ Connection successful!`, 'success');
-                switchTab('data');
-                
-                // Auto-save connection settings
-                saveSettings();
-
-            } catch (error) {
-                console.error('Connection test failed:', error);
-                
-                if (error.name === 'TypeError' && error.message.includes('fetch')) {
-                    showStatus(`❌ Network error: Cannot reach ${getApiBaseUrl()}. Try enabling CORS proxy if available.`, 'error');
+                if (response1.ok) {
+                    const data = await response1.json();
+                    if (data['access-token']) {
+                        lyricAPI.token = data['access-token'];
+                        lyricAPI.baseUrl = apiBaseUrl;
+                        showStatus('✅ Method 1 SUCCESS!', 'success');
+                        switchTab('data');
+                        setLoading(false);
+                        return;
+                    }
                 } else {
-                    showStatus(`❌ Connection failed: ${error.message}`, 'error');
+                    const error1 = await response1.text();
+                    showStatus(`Method 1 failed: ${response1.status} - ${error1}`, 'error');
                 }
-            } finally {
-                setLoading(false);
+            } catch (e) {
+                showStatus(`Method 1 error: ${e.message}`, 'error');
             }
+
+            // Test Method 2: Basic Auth header only
+            try {
+                showStatus('Method 2: Basic Auth header only', 'info');
+                const basicAuth = btoa(clientId + ':' + clientSecret);
+                const response2 = await fetch(fullUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Basic ${basicAuth}`,
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    },
+                    body: JSON.stringify({}),
+                    mode: 'cors'
+                });
+
+                if (response2.ok) {
+                    const data = await response2.json();
+                    if (data['access-token']) {
+                        lyricAPI.token = data['access-token'];
+                        lyricAPI.baseUrl = apiBaseUrl;
+                        showStatus('✅ Method 2 SUCCESS!', 'success');
+                        switchTab('data');
+                        setLoading(false);
+                        return;
+                    }
+                } else {
+                    const error2 = await response2.text();
+                    showStatus(`Method 2 failed: ${response2.status} - ${error2}`, 'error');
+                }
+            } catch (e) {
+                showStatus(`Method 2 error: ${e.message}`, 'error');
+            }
+
+            // Test Method 3: Base64 in JSON body
+            try {
+                showStatus('Method 3: Base64 in JSON body', 'info');
+                const basicAuth = btoa(clientId + ':' + clientSecret);
+                const response3 = await fetch(fullUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        credentials: basicAuth
+                    }),
+                    mode: 'cors'
+                });
+
+                if (response3.ok) {
+                    const data = await response3.json();
+                    if (data['access-token']) {
+                        lyricAPI.token = data['access-token'];
+                        lyricAPI.baseUrl = apiBaseUrl;
+                        showStatus('✅ Method 3 SUCCESS!', 'success');
+                        switchTab('data');
+                        setLoading(false);
+                        return;
+                    }
+                } else {
+                    const error3 = await response3.text();
+                    showStatus(`Method 3 failed: ${response3.status} - ${error3}`, 'error');
+                }
+            } catch (e) {
+                showStatus(`Method 3 error: ${e.message}`, 'error');
+            }
+
+            // Test Method 4: Both Basic Auth header AND JSON body
+            try {
+                showStatus('Method 4: Basic Auth + JSON body', 'info');
+                const basicAuth = btoa(clientId + ':' + clientSecret);
+                const response4 = await fetch(fullUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Basic ${basicAuth}`,
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        clientId: clientId,
+                        clientSecret: clientSecret
+                    }),
+                    mode: 'cors'
+                });
+
+                if (response4.ok) {
+                    const data = await response4.json();
+                    if (data['access-token']) {
+                        lyricAPI.token = data['access-token'];
+                        lyricAPI.baseUrl = apiBaseUrl;
+                        showStatus('✅ Method 4 SUCCESS!', 'success');
+                        switchTab('data');
+                        setLoading(false);
+                        return;
+                    }
+                } else {
+                    const error4 = await response4.text();
+                    showStatus(`Method 4 failed: ${response4.status} - ${error4}`, 'error');
+                }
+            } catch (e) {
+                showStatus(`Method 4 error: ${e.message}`, 'error');
+            }
+
+            // If we get here, all methods failed
+            showStatus('❌ All authentication methods failed!', 'error');
+            setLoading(false);
         }
 
         // Load available tables
