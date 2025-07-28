@@ -385,22 +385,7 @@
             document.getElementById('loading').style.display = loading ? 'block' : 'none';
         }
 
-        // Debug logging function that shows in both console and UI
-        function debugLog(message) {
-            console.log(message);
-            const debugDiv = document.getElementById('debugInfo');
-            const timestamp = new Date().toLocaleTimeString();
-            debugDiv.innerHTML += `[${timestamp}] ${message}\n`;
-            debugDiv.style.display = 'block';
-            // Scroll to bottom
-            debugDiv.scrollTop = debugDiv.scrollHeight;
-        }
-
-        function clearDebug() {
-            document.getElementById('debugInfo').innerHTML = '';
-        }
-
-        // Simpler, more focused test
+        // SIMPLE test connection - just try the method we think works
         async function testConnection() {
             const baseUrl = document.getElementById('baseUrl').value.trim();
             const clientId = document.getElementById('clientId').value;
@@ -413,30 +398,21 @@
 
             setLoading(true);
             
-            const apiBaseUrl = getApiBaseUrl();
-            const fullUrl = `${apiBaseUrl}/tokens/create-token`;
-            
-            debugLog('🚀 STARTING CONNECTION TEST');
-            debugLog(`URL: ${fullUrl}`);
-            debugLog(`Client ID: ${clientId}`);
-            debugLog(`Client Secret: ${clientSecret.substring(0, 8)}... (${clientSecret.length} chars)`);
-            
-            // Create Base64 credentials
-            const combined = clientId + ':' + clientSecret;
-            const basicAuth = btoa(combined);
-            
-            debugLog(`Combined: ${clientId}:${clientSecret.substring(0, 8)}...`);
-            debugLog(`Base64: ${basicAuth}`);
-            debugLog(`Decoded: ${atob(basicAuth)}`);
-            
             try {
-                debugLog('📤 SENDING REQUEST...');
-                
-                const requestBody = {
-                    clientId: clientId,
-                    clientSecret: clientSecret
-                };
-                
+                const apiBaseUrl = getApiBaseUrl();
+                const fullUrl = `${apiBaseUrl}/tokens/create-token`;
+
+                // Try Basic Auth + JSON body
+                const basicAuth = btoa(clientId + ':' + clientSecret);
+
+                // LOG WHAT WE'RE SENDING
+                console.log('=== REQUEST INFO ===');
+                console.log('URL:', fullUrl);
+                console.log('Client ID:', clientId);
+                console.log('Client Secret length:', clientSecret.length);
+                console.log('Base64 auth:', basicAuth);
+                console.log('Decoded auth:', atob(basicAuth));
+
                 const response = await fetch(fullUrl, {
                     method: 'POST',
                     headers: {
@@ -444,17 +420,22 @@
                         'Content-Type': 'application/json',
                         'Accept': 'application/json'
                     },
-                    body: JSON.stringify(requestBody),
+                    body: JSON.stringify({
+                        clientId: clientId,
+                        clientSecret: clientSecret
+                    }),
                     mode: 'cors'
                 });
 
-                debugLog(`📥 RESPONSE: ${response.status} ${response.statusText}`);
-                
+                // LOG THE RESPONSE
+                console.log('=== RESPONSE INFO ===');
+                console.log('Status:', response.status, response.statusText);
+                console.log('Headers:', Object.fromEntries(response.headers.entries()));
+
                 const responseText = await response.text();
-                debugLog(`Response body: ${responseText}`);
+                console.log('Body:', responseText);
 
                 if (response.ok) {
-                    debugLog('✅ SUCCESS!');
                     const data = JSON.parse(responseText);
                     if (data['access-token']) {
                         lyricAPI.token = data['access-token'];
@@ -466,17 +447,22 @@
                         saveSettings();
                         return;
                     }
-                } else {
-                    debugLog('❌ FAILED - Authentication error');
-                    showStatus(`❌ Failed: ${response.status} - ${responseText}`, 'error');
                 }
 
+                // If we get here, it failed
+                showStatus(`❌ Failed: ${response.status} - ${responseText}\n\nCheck browser console (F12) for detailed request/response info.`, 'error');
+
             } catch (error) {
-                debugLog(`💥 ERROR: ${error.message}`);
-                showStatus(`❌ Request error: ${error.message}`, 'error');
+                console.log('=== ERROR INFO ===');
+                console.log('Error:', error);
+                
+                if (error.name === 'TypeError' && error.message.includes('fetch')) {
+                    showStatus(`❌ Network error: Cannot reach ${getApiBaseUrl()}. Try enabling CORS proxy if available.`, 'error');
+                } else {
+                    showStatus(`❌ Connection failed: ${error.message}`, 'error');
+                }
             } finally {
                 setLoading(false);
-                debugLog('🏁 TEST COMPLETE');
             }
         }
 
