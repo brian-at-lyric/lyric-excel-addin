@@ -171,31 +171,6 @@
             100% { transform: rotate(360deg); }
         }
 
-        .example-btn {
-            background-color: #f8f9fa;
-            border: 1px solid #dee2e6;
-            border-radius: 4px;
-            padding: 6px 12px;
-            margin-right: 8px;
-            margin-bottom: 4px;
-            font-size: 12px;
-            color: #495057;
-            cursor: pointer;
-            transition: all 0.2s;
-            display: inline-block;
-        }
-
-        .example-btn:hover {
-            background-color: #e9ecef;
-            border-color: #adb5bd;
-        }
-
-        .example-btn:active {
-            background-color: #0078d4;
-            color: white;
-            border-color: #0078d4;
-        }
-
         .data-preview {
             max-height: 200px;
             overflow-y: auto;
@@ -273,16 +248,6 @@
                     <label for="baseUrl">Lyric Environment URL</label>
                     <input type="text" id="baseUrl" placeholder="https://your-env.studio.lyric.tech" value="">
                     <div class="help-text">Enter your complete Lyric environment URL (without /lyapi)</div>
-                </div>
-
-                <div class="form-group">
-                    <label>Quick Examples:</label>
-                    <div style="margin-top: 8px;">
-                        <button type="button" class="example-btn" onclick="setExampleUrl('https://trial1.studio.lyric.tech')">Trial 1</button>
-                        <button type="button" class="example-btn" onclick="setExampleUrl('https://demo.studio.lyric.tech')">Demo</button>
-                        <button type="button" class="example-btn" onclick="setExampleUrl('https://staging.studio.lyric.tech')">Staging</button>
-                    </div>
-                    <div class="help-text">Click examples above or enter your custom URL</div>
                 </div>
 
                 <div class="form-group">
@@ -391,20 +356,6 @@
             // Show selected tab
             document.getElementById(tabName + '-tab').classList.add('active');
             event.target.classList.add('active');
-        }
-
-        // Set example URL
-        function setExampleUrl(url) {
-            document.getElementById('baseUrl').value = url;
-            lyricAPI.baseUrl = url + '/lyapi';
-            
-            // Visual feedback
-            event.target.style.backgroundColor = '#0078d4';
-            event.target.style.color = 'white';
-            setTimeout(() => {
-                event.target.style.backgroundColor = '#f8f9fa';
-                event.target.style.color = '#495057';
-            }, 200);
         }
 
         // Base URL change handler
