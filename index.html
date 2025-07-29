@@ -631,63 +631,103 @@
                 
                 let csvData = await dataResponse.text();
 
+                console.log('CSV data length:', csvData.length);
+                console.log('CSV data preview:', csvData.substring(0, 200) + '...');
+
                 // Parse CSV data
                 const rows = csvData.split('\n').filter(row => row.trim());
+                console.log('Total rows after filtering:', rows.length);
+                
+                if (rows.length === 0) {
+                    throw new Error('No data found in downloaded file');
+                }
+                
                 const headers = rows[0].split(',');
                 const data = rows.slice(1).map(row => row.split(','));
+                
+                console.log('Headers:', headers);
+                console.log('Data rows:', data.length);
+                console.log('Sample data row:', data[0]);
 
                 // Insert into Excel - with better error handling
                 if (typeof Excel !== 'undefined') {
+                    console.log('Starting Excel data insertion...');
+                    
                     await Excel.run(async (context) => {
                         const worksheetName = document.getElementById('worksheetName').value || 'Lyric Data';
                         const startCell = document.getElementById('startCell').value || 'A1';
                         const clearExisting = document.getElementById('clearExisting').checked;
 
                         console.log('Creating worksheet:', worksheetName);
+                        console.log('Starting at cell:', startCell);
+                        console.log('Clear existing:', clearExisting);
 
                         // Get or create worksheet
                         let worksheet;
                         try {
+                            console.log('Trying to get existing worksheet...');
                             worksheet = context.workbook.worksheets.getItem(worksheetName);
-                        } catch {
+                            await context.sync(); // Sync to check if worksheet exists
+                            console.log('Found existing worksheet');
+                        } catch (error) {
+                            console.log('Worksheet not found, creating new one:', error.message);
                             worksheet = context.workbook.worksheets.add(worksheetName);
+                            await context.sync();
+                            console.log('Created new worksheet');
                         }
 
                         // Clear existing data if requested
                         if (clearExisting) {
-                            const usedRange = worksheet.getUsedRange();
-                            if (usedRange) {
-                                usedRange.clear();
+                            console.log('Clearing existing data...');
+                            try {
+                                const usedRange = worksheet.getUsedRange();
+                                if (usedRange) {
+                                    usedRange.clear();
+                                    await context.sync();
+                                    console.log('Cleared existing data');
+                                }
+                            } catch (error) {
+                                console.log('No existing data to clear:', error.message);
                             }
                         }
 
                         // Get starting range
+                        console.log('Getting starting range...');
                         const startRange = worksheet.getRange(startCell);
+                        await context.sync();
                         
                         // Insert headers
+                        console.log('Inserting headers...');
                         const headerRange = startRange.getResizedRange(0, headers.length - 1);
                         headerRange.values = [headers];
                         headerRange.format.font.bold = true;
                         headerRange.format.fill.color = '#0078d4';
                         headerRange.format.font.color = 'white';
+                        await context.sync();
+                        console.log('Headers inserted');
 
                         // Insert data
                         if (data.length > 0) {
+                            console.log('Inserting data rows...');
                             const dataRange = startRange.getOffsetRange(1, 0).getResizedRange(data.length - 1, headers.length - 1);
                             dataRange.values = data;
+                            await context.sync();
+                            console.log('Data rows inserted');
                         }
 
                         // Auto-fit columns
+                        console.log('Auto-fitting columns...');
                         const usedRange = worksheet.getUsedRange();
                         if (usedRange) {
                             usedRange.format.autofitColumns();
                         }
                         
                         // Activate the worksheet
+                        console.log('Activating worksheet...');
                         worksheet.activate();
 
                         await context.sync();
-                        console.log('Excel data inserted successfully');
+                        console.log('Excel data insertion completed successfully');
                     });
                 } else {
                     console.log('Excel API not available - simulating data insert');
