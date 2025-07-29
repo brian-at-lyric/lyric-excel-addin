@@ -649,88 +649,102 @@
                 console.log('Data rows:', data.length);
                 console.log('Sample data row:', data[0]);
 
-                // Insert into Excel - with better error handling
-                if (typeof Excel !== 'undefined') {
-                    console.log('Starting Excel data insertion...');
+                // Insert into Excel - with Office context validation
+                if (typeof Excel !== 'undefined' && Office && Office.context) {
+                    console.log('Excel API available, Office context ready');
+                    console.log('Office host:', Office.context.host);
+                    console.log('Office platform:', Office.context.platform);
                     
-                    await Excel.run(async (context) => {
-                        const worksheetName = document.getElementById('worksheetName').value || 'Lyric Data';
-                        const startCell = document.getElementById('startCell').value || 'A1';
-                        const clearExisting = document.getElementById('clearExisting').checked;
+                    try {
+                        await Excel.run(async (context) => {
+                            console.log('Inside Excel.run context');
+                            
+                            const worksheetName = document.getElementById('worksheetName').value || 'Lyric Data';
+                            const startCell = document.getElementById('startCell').value || 'A1';
+                            const clearExisting = document.getElementById('clearExisting').checked;
 
-                        console.log('Creating worksheet:', worksheetName);
-                        console.log('Starting at cell:', startCell);
-                        console.log('Clear existing:', clearExisting);
+                            console.log('Creating worksheet:', worksheetName);
+                            console.log('Starting at cell:', startCell);
+                            console.log('Clear existing:', clearExisting);
 
-                        // Get or create worksheet
-                        let worksheet;
-                        try {
-                            console.log('Trying to get existing worksheet...');
-                            worksheet = context.workbook.worksheets.getItem(worksheetName);
-                            await context.sync(); // Sync to check if worksheet exists
-                            console.log('Found existing worksheet');
-                        } catch (error) {
-                            console.log('Worksheet not found, creating new one:', error.message);
-                            worksheet = context.workbook.worksheets.add(worksheetName);
-                            await context.sync();
-                            console.log('Created new worksheet');
-                        }
-
-                        // Clear existing data if requested
-                        if (clearExisting) {
-                            console.log('Clearing existing data...');
+                            // Get or create worksheet
+                            let worksheet;
                             try {
-                                const usedRange = worksheet.getUsedRange();
-                                if (usedRange) {
-                                    usedRange.clear();
-                                    await context.sync();
-                                    console.log('Cleared existing data');
-                                }
+                                console.log('Trying to get existing worksheet...');
+                                worksheet = context.workbook.worksheets.getItem(worksheetName);
+                                await context.sync(); // Sync to check if worksheet exists
+                                console.log('Found existing worksheet');
                             } catch (error) {
-                                console.log('No existing data to clear:', error.message);
+                                console.log('Worksheet not found, creating new one:', error.message);
+                                worksheet = context.workbook.worksheets.add(worksheetName);
+                                await context.sync();
+                                console.log('Created new worksheet');
                             }
-                        }
 
-                        // Get starting range
-                        console.log('Getting starting range...');
-                        const startRange = worksheet.getRange(startCell);
-                        await context.sync();
-                        
-                        // Insert headers
-                        console.log('Inserting headers...');
-                        const headerRange = startRange.getResizedRange(0, headers.length - 1);
-                        headerRange.values = [headers];
-                        headerRange.format.font.bold = true;
-                        headerRange.format.fill.color = '#0078d4';
-                        headerRange.format.font.color = 'white';
-                        await context.sync();
-                        console.log('Headers inserted');
+                            // Clear existing data if requested
+                            if (clearExisting) {
+                                console.log('Clearing existing data...');
+                                try {
+                                    const usedRange = worksheet.getUsedRange();
+                                    if (usedRange) {
+                                        usedRange.clear();
+                                        await context.sync();
+                                        console.log('Cleared existing data');
+                                    }
+                                } catch (error) {
+                                    console.log('No existing data to clear:', error.message);
+                                }
+                            }
 
-                        // Insert data
-                        if (data.length > 0) {
-                            console.log('Inserting data rows...');
-                            const dataRange = startRange.getOffsetRange(1, 0).getResizedRange(data.length - 1, headers.length - 1);
-                            dataRange.values = data;
+                            // Get starting range
+                            console.log('Getting starting range...');
+                            const startRange = worksheet.getRange(startCell);
                             await context.sync();
-                            console.log('Data rows inserted');
-                        }
+                            
+                            // Insert headers
+                            console.log('Inserting headers...');
+                            const headerRange = startRange.getResizedRange(0, headers.length - 1);
+                            headerRange.values = [headers];
+                            headerRange.format.font.bold = true;
+                            headerRange.format.fill.color = '#0078d4';
+                            headerRange.format.font.color = 'white';
+                            await context.sync();
+                            console.log('Headers inserted');
 
-                        // Auto-fit columns
-                        console.log('Auto-fitting columns...');
-                        const usedRange = worksheet.getUsedRange();
-                        if (usedRange) {
-                            usedRange.format.autofitColumns();
-                        }
-                        
-                        // Activate the worksheet
-                        console.log('Activating worksheet...');
-                        worksheet.activate();
+                            // Insert data
+                            if (data.length > 0) {
+                                console.log('Inserting data rows...');
+                                const dataRange = startRange.getOffsetRange(1, 0).getResizedRange(data.length - 1, headers.length - 1);
+                                dataRange.values = data;
+                                await context.sync();
+                                console.log('Data rows inserted');
+                            }
 
-                        await context.sync();
-                        console.log('Excel data insertion completed successfully');
-                    });
+                            // Auto-fit columns
+                            console.log('Auto-fitting columns...');
+                            const usedRange = worksheet.getUsedRange();
+                            if (usedRange) {
+                                usedRange.format.autofitColumns();
+                            }
+                            
+                            // Activate the worksheet
+                            console.log('Activating worksheet...');
+                            worksheet.activate();
+
+                            await context.sync();
+                            console.log('Excel data insertion completed successfully');
+                        });
+                    } catch (excelError) {
+                        console.error('Excel.run failed:', excelError);
+                        throw new Error(`Excel operation failed: ${excelError.message}`);
+                    }
                 } else {
-                    console.log('Excel API not available - simulating data insert');
+                    console.log('Excel API not available or Office context not ready');
+                    console.log('Excel available:', typeof Excel !== 'undefined');
+                    console.log('Office available:', typeof Office !== 'undefined');
+                    console.log('Office context available:', Office && Office.context ? 'yes' : 'no');
+                    
+                    throw new Error('Excel API not available. Make sure the add-in is running in Excel.');
                 }
 
                 showStatus(`✅ Successfully imported ${data.length} rows to Excel!`, 'success');
