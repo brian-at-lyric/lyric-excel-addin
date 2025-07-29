@@ -623,7 +623,7 @@
                     throw new Error(`Download failed: ${response.status} ${response.statusText}`);
                 }
 
-                const downloadInfo = await downloadResponse.json();
+                const downloadInfo = await response.json();
                 const downloadUrl = downloadInfo.downloads.urls[0];
 
                 // Fetch the actual data through proxy if needed
@@ -648,7 +648,7 @@
                 console.log('CSV data length:', csvData.length);
                 console.log('CSV data preview:', csvData.substring(0, 200) + '...');
 
-                // Parse CSV data with cleaner headers
+                // Parse CSV data
                 const rows = csvData.split('\n').filter(row => row.trim());
                 console.log('Total rows after filtering:', rows.length);
                 
@@ -656,13 +656,10 @@
                     throw new Error('No data found in downloaded file');
                 }
                 
-                // Clean headers (remove quotes) but keep data quotes for safety
-                const headers = rows[0].split(',').map(header => 
-                    header.replace(/^"(.*)"$/, '$1') // Remove surrounding quotes
-                );
+                const headers = rows[0].split(',');
                 const data = rows.slice(1).map(row => row.split(','));
                 
-                console.log('Headers (cleaned):', headers);
+                console.log('Headers:', headers);
                 console.log('Data rows:', data.length);
                 console.log('Sample data row:', data[0]);
 
