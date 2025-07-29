@@ -32,6 +32,17 @@
             margin-bottom: 30px;
         }
 
+        .logo {
+            margin-bottom: 15px;
+        }
+
+        .logo-img {
+            max-width: 120px;
+            max-height: 60px;
+            width: auto;
+            height: auto;
+        }
+
         .header h1 {
             color: #0078d4;
             margin: 0;
@@ -210,7 +221,10 @@
 <body>
     <div class="container">
         <div class="header">
-            <h1>🎵 Lyric Data Connector</h1>
+            <div class="logo">
+                <img src="assets/icon-80.png" alt="Lyric Logo" class="logo-img">
+            </div>
+            <h1>Lyric Data Connector</h1>
             <p>Connect your Excel workbook to Lyric platform data</p>
         </div>
 
@@ -609,7 +623,7 @@
                     throw new Error(`Download failed: ${response.status} ${response.statusText}`);
                 }
 
-                const downloadInfo = await response.json();
+                const downloadInfo = await downloadResponse.json();
                 const downloadUrl = downloadInfo.downloads.urls[0];
 
                 // Fetch the actual data through proxy if needed
@@ -634,7 +648,7 @@
                 console.log('CSV data length:', csvData.length);
                 console.log('CSV data preview:', csvData.substring(0, 200) + '...');
 
-                // Parse CSV data
+                // Parse CSV data with cleaner headers
                 const rows = csvData.split('\n').filter(row => row.trim());
                 console.log('Total rows after filtering:', rows.length);
                 
@@ -642,10 +656,13 @@
                     throw new Error('No data found in downloaded file');
                 }
                 
-                const headers = rows[0].split(',');
+                // Clean headers (remove quotes) but keep data quotes for safety
+                const headers = rows[0].split(',').map(header => 
+                    header.replace(/^"(.*)"$/, '$1') // Remove surrounding quotes
+                );
                 const data = rows.slice(1).map(row => row.split(','));
                 
-                console.log('Headers:', headers);
+                console.log('Headers (cleaned):', headers);
                 console.log('Data rows:', data.length);
                 console.log('Sample data row:', data[0]);
 
